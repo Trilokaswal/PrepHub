@@ -3,22 +3,15 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
-  MoreVertical,
   Clock,
-  HelpCircle,
   Eye,
   Edit2,
   Trash2,
-  ArrowUpDown,
-  BookOpen,
-  Calendar,
-  Layers,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
 import { MockTest, TestStatus } from '@/types';
-import { Badge, BadgeVariant } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { subjectOptions } from '@/data/mockData';

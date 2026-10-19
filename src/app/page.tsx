@@ -4,7 +4,6 @@ import {
   ArrowRight,
   LayoutDashboard,
   CheckCircle2,
-  Layers,
   Sparkles,
 } from 'lucide-react';
 

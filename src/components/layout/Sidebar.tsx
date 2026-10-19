@@ -13,11 +13,9 @@ import {
   GraduationCap,
   X,
   Sparkles,
-  Info,
 } from 'lucide-react';
 import { navigationItems, mockTeacherProfile } from '@/data/mockData';
 import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
 
 interface SidebarProps {
   mobileOpen: boolean;

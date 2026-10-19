@@ -16,6 +16,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentTestsTable } from '@/components/dashboard/RecentTestsTable';
 import { CreateTestModal } from '@/components/dashboard/CreateTestModal';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import {
   mockTeacherProfile,
   mockDashboardStats,
@@ -218,32 +219,27 @@ export default function TeacherDashboardPage() {
       />
 
       {/* Demo Action Modal */}
-      {demoNotice.isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-2 text-slate-900 font-semibold text-lg">
-              <Sparkles className="w-5 h-5 text-[#4F46E5]" />
-              <span>{demoNotice.title}</span>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-              {demoNotice.message}
-            </p>
-            <div className="pt-2 flex justify-end">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setDemoNotice((prev) => ({ ...prev, isOpen: false }))}
-              >
-                Got It
-              </Button>
-            </div>
+      <Modal
+        isOpen={demoNotice.isOpen}
+        onClose={() => setDemoNotice((prev) => ({ ...prev, isOpen: false }))}
+        title={demoNotice.title}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            {demoNotice.message}
+          </p>
+          <div className="pt-2 flex justify-end">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setDemoNotice((prev) => ({ ...prev, isOpen: false }))}
+            >
+              Got It
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
     </>
   );
 }

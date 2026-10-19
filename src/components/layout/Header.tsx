@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Menu, Bell, Search, Info, HelpCircle } from 'lucide-react';
+import React from 'react';
+import { Menu, Bell } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { mockTeacherProfile } from '@/data/mockData';
@@ -12,7 +12,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuToggle, onShowNotice }) => {
-  const [searchFocused, setSearchFocused] = useState(false);
 
   const handleNotificationClick = () => {
     if (onShowNotice) {

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { MockTest, TestStatus } from '@/types';
 import { subjectOptions } from '@/data/mockData';
-import { BookOpen, Clock, HelpCircle, Layers, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 interface CreateTestModalProps {
   isOpen: boolean;
@@ -25,6 +25,37 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
   const [status, setStatus] = useState<TestStatus>('draft');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSuccess, setIsSuccess] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clean up any pending timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Reset transient feedback and clear timers when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      setIsSuccess(false);
+      setErrors({});
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsSuccess(false);
+    onClose();
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +91,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
     onTestCreated(newTest);
     setIsSuccess(true);
 
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setIsSuccess(false);
       setTitle('');
       setQuestionCount(30);
@@ -74,7 +105,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Create New Mock Test"
       description="Create a test definition in local memory for this teacher dashboard."
       maxWidth="lg"
@@ -227,7 +258,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={handleClose}>
               Cancel
             </Button>
             <Button variant="primary" type="submit">
