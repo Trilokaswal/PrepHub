@@ -1,0 +1,249 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  FileText,
+  Calendar,
+  Users,
+  Clock,
+  Plus,
+  Download,
+  AlertCircle,
+  Sparkles,
+  RotateCcw,
+} from 'lucide-react';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { RecentTestsTable } from '@/components/dashboard/RecentTestsTable';
+import { CreateTestModal } from '@/components/dashboard/CreateTestModal';
+import { Button } from '@/components/ui/Button';
+import {
+  mockTeacherProfile,
+  mockDashboardStats,
+  initialMockTests,
+} from '@/data/mockData';
+import { MockTest } from '@/types';
+
+export default function TeacherDashboardPage() {
+  const [tests, setTests] = useState<MockTest[]>(initialMockTests);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [demoNotice, setDemoNotice] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  // Calculate live dynamic counts based on local test state
+  const totalTestsCount = tests.length;
+  const upcomingTestsCount = tests.filter((t) => t.status === 'scheduled').length;
+  const totalAttemptsCount = tests.reduce((acc, t) => acc + t.totalAttempts, 0);
+  const pendingReviewCount = tests.filter((t) => t.status === 'pending_review').length;
+
+  const handleTestCreated = (newTest: MockTest) => {
+    setTests((prev) => [newTest, ...prev]);
+  };
+
+  const handleDeleteTest = (id: string) => {
+    setTests((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleResetSampleData = () => {
+    setTests(initialMockTests);
+  };
+
+  const handleExportClick = () => {
+    setDemoNotice({
+      isOpen: true,
+      title: 'Export Test Analytics (Demo)',
+      message:
+        'The export functionality generates CSV and PDF report summaries in production. In this local mock phase, exports are simulated.',
+    });
+  };
+
+  return (
+    <>
+      <div className="space-y-8">
+        {/* Welcome Header & Primary Actions */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                Welcome back, {mockTeacherProfile.name.split(' ')[0]} 👋
+              </h1>
+            </div>
+            <p className="text-sm text-slate-500 max-w-2xl">
+              Manage your mock examinations, review student attempt metrics, and evaluate pending grading queues for {mockTeacherProfile.department}.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="md"
+              leftIcon={<Download className="w-4 h-4" />}
+              onClick={handleExportClick}
+            >
+              Export
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              Create New Test
+            </Button>
+          </div>
+        </div>
+
+        {/* 4 Stat Cards */}
+        <section aria-label="Performance Statistics">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <StatCard
+              title="Total Tests"
+              value={totalTestsCount}
+              change={mockDashboardStats.totalTests.change}
+              isPositive={mockDashboardStats.totalTests.isPositive}
+              period={mockDashboardStats.totalTests.period}
+              icon={<FileText className="w-6 h-6" />}
+              iconBgColor="bg-[#EEF2FF] text-[#4F46E5]"
+            />
+            <StatCard
+              title="Upcoming Tests"
+              value={upcomingTestsCount}
+              change={mockDashboardStats.upcomingTests.change}
+              isPositive={mockDashboardStats.upcomingTests.isPositive}
+              period={mockDashboardStats.upcomingTests.period}
+              icon={<Calendar className="w-6 h-6" />}
+              iconBgColor="bg-sky-50 text-sky-600"
+            />
+            <StatCard
+              title="Total Attempts"
+              value={totalAttemptsCount.toLocaleString()}
+              change={mockDashboardStats.totalAttempts.change}
+              isPositive={mockDashboardStats.totalAttempts.isPositive}
+              period={mockDashboardStats.totalAttempts.period}
+              icon={<Users className="w-6 h-6" />}
+              iconBgColor="bg-emerald-50 text-emerald-600"
+            />
+            <StatCard
+              title="Pending Review"
+              value={pendingReviewCount}
+              change={mockDashboardStats.pendingReview.change}
+              isPositive={mockDashboardStats.pendingReview.isPositive}
+              period={mockDashboardStats.pendingReview.period}
+              icon={<Clock className="w-6 h-6" />}
+              iconBgColor="bg-amber-50 text-amber-600"
+            />
+          </div>
+        </section>
+
+        {/* Actionable Notice for Grading Queue */}
+        {pendingReviewCount > 0 && (
+          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-900">
+            <div className="flex items-center gap-3">
+              <span className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {pendingReviewCount} test submissions require manual grading
+                </p>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Subjective answers in Organic Chemistry & Modern World History await evaluation.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100/50 self-start sm:self-auto shrink-0"
+              onClick={() =>
+                setDemoNotice({
+                  isOpen: true,
+                  title: 'Grading Queue (Demo)',
+                  message:
+                    'The grading interface lets instructors score subjective short-answer and essay questions with custom rubrics. This will be integrated with the backend submission queue.',
+                })
+              }
+            >
+              Open Grading Queue
+            </Button>
+          </div>
+        )}
+
+        {/* Recent Tests Section */}
+        <section aria-label="Recent Tests Section" className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                Recent Mock Tests
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Live filtering and status management across your test catalog.
+              </p>
+            </div>
+            {tests.length !== initialMockTests.length && (
+              <Button
+                variant="ghost"
+                size="sm"
+                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                onClick={handleResetSampleData}
+                className="text-xs text-slate-500 hover:text-slate-800 self-start sm:self-auto"
+              >
+                Reset to default sample tests
+              </Button>
+            )}
+          </div>
+
+          {/* Interactive Tests Table */}
+          <RecentTestsTable
+            tests={tests}
+            onDeleteTest={handleDeleteTest}
+            onShowNotice={(title, message) =>
+              setDemoNotice({ isOpen: true, title, message })
+            }
+          />
+        </section>
+      </div>
+
+      {/* Create Test Modal */}
+      <CreateTestModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onTestCreated={handleTestCreated}
+      />
+
+      {/* Demo Action Modal */}
+      {demoNotice.isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-lg">
+              <Sparkles className="w-5 h-5 text-[#4F46E5]" />
+              <span>{demoNotice.title}</span>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              {demoNotice.message}
+            </p>
+            <div className="pt-2 flex justify-end">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setDemoNotice((prev) => ({ ...prev, isOpen: false }))}
+              >
+                Got It
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
