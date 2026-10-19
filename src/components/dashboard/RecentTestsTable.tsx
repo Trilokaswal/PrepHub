@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { subjectOptions } from '@/data/mockData';
+import { formatDate, formatDateTime, formatNumber } from '@/lib/formatters';
 
 interface RecentTestsTableProps {
   tests: MockTest[];
@@ -266,7 +267,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                         <span>ID: {test.id}</span>
                         {test.scheduledDate && (
                           <span className="text-sky-600 font-medium">
-                            • Starts {new Date(test.scheduledDate).toLocaleDateString()}
+                            • Starts {formatDate(test.scheduledDate)}
                           </span>
                         )}
                       </div>
@@ -300,7 +301,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                     {/* Attempts & Avg */}
                     <td className="py-4 px-4 text-center">
                       <div className="font-medium text-slate-800">
-                        {test.totalAttempts.toLocaleString()}
+                        {formatNumber(test.totalAttempts)}
                       </div>
                       {test.averageScore !== undefined && (
                         <div className="text-[11px] text-slate-400">
@@ -410,7 +411,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                     Attempts
                   </span>
                   <span className="font-medium text-slate-800">
-                    {test.totalAttempts.toLocaleString()}
+                    {formatNumber(test.totalAttempts)}
                   </span>
                 </div>
                 <div>
@@ -513,7 +514,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
               <div className="p-3 rounded-lg border border-slate-100 bg-white col-span-2 sm:col-span-2">
                 <span className="text-xs text-slate-400 block">Created Timestamp</span>
                 <span className="text-xs font-medium text-slate-700">
-                  {new Date(selectedTest.createdAt).toLocaleString()}
+                  {formatDateTime(selectedTest.createdAt)}
                 </span>
               </div>
             </div>

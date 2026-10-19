@@ -23,6 +23,7 @@ import {
   initialMockTests,
 } from '@/data/mockData';
 import { MockTest } from '@/types';
+import { formatNumber } from '@/lib/formatters';
 
 export default function TeacherDashboardPage() {
   const [tests, setTests] = useState<MockTest[]>(initialMockTests);
@@ -123,7 +124,7 @@ export default function TeacherDashboardPage() {
             />
             <StatCard
               title="Total Attempts"
-              value={totalAttemptsCount.toLocaleString()}
+              value={formatNumber(totalAttemptsCount)}
               change={mockDashboardStats.totalAttempts.change}
               isPositive={mockDashboardStats.totalAttempts.isPositive}
               period={mockDashboardStats.totalAttempts.period}
