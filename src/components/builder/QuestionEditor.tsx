@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Copy,
   Trash2,
   Plus,
   X,
   Image as ImageIcon,
+  Upload,
   CheckCircle2,
   CheckSquare,
   Hash,
@@ -40,6 +41,38 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   const [statementPreview, setStatementPreview] = useState(false);
   const [showImageInput, setShowImageInput] = useState(!!question.imageUrl);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Helper to handle JPEG/PNG file uploads
+  const handleImageUpload = (file: File) => {
+    setImageError(null);
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setImageError('Please select a JPEG or PNG image file (.jpg, .jpeg, .png).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError('Image file size must be less than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        updateField('imageUrl', reader.result);
+        if (!question.imageAlt) {
+          const cleanName = file.name.replace(/\.[^/.]+$/, '');
+          updateField('imageAlt', cleanName);
+        }
+      }
+    };
+    reader.onerror = () => {
+      setImageError('Failed to read image file. Please try again.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Helper to update specific fields
   const updateField = <K extends keyof Question>(key: K, value: Question[K]) => {
@@ -326,46 +359,114 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             />
           )}
 
-          {/* Optional Image URL Input & Thumbnail */}
+          {/* Question Image Attachment Section */}
           {showImageInput && (
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-slate-700">
-                <span>Diagram / Diagrammatic Image Reference</span>
-                {question.imageUrl && (
-                  <button
-                    type="button"
-                    onClick={() => updateField('imageUrl', undefined)}
-                    className="text-rose-600 hover:text-rose-800 text-[11px]"
-                  >
-                    Remove Image
-                  </button>
-                )}
-              </div>
+            <div className="space-y-2">
               <input
-                type="url"
-                value={question.imageUrl || ''}
-                onChange={(e) => updateField('imageUrl', e.target.value.trim() || undefined)}
-                placeholder="https://example.com/diagram.png"
-                className="w-full px-3 py-1.5 text-xs rounded border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                  e.target.value = '';
+                }}
               />
-              {question.imageUrl && (
-                <div className="mt-2 flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={question.imageUrl}
-                    alt={question.imageAlt || 'Question diagram preview'}
-                    className="max-h-32 rounded border border-slate-200 object-contain bg-white p-1"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <input
-                    type="text"
-                    value={question.imageAlt || ''}
-                    onChange={(e) => updateField('imageAlt', e.target.value)}
-                    placeholder="Image description / Alt text..."
-                    className="flex-1 px-2.5 py-1 text-xs rounded border border-slate-200 bg-white"
-                  />
+
+              {!question.imageUrl ? (
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  className="p-5 bg-slate-50/80 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 text-center space-y-2.5 transition-colors"
+                >
+                  <div className="h-10 w-10 mx-auto rounded-full bg-white border border-slate-200 text-indigo-600 shadow-xs flex items-center justify-center">
+                    <Upload className="w-5 h-5" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-800">
+                      Upload Question Diagram or Figure
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Select a JPEG or PNG file (up to 5MB)
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Upload className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Upload JPEG or PNG File
+                    </Button>
+                  </div>
+                  {imageError && (
+                    <p className="text-xs text-rose-600 font-medium">{imageError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/90 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-700">
+                    <span className="flex items-center gap-1.5 font-semibold text-slate-800">
+                      <ImageIcon className="w-4 h-4 text-indigo-600" />
+                      <span>Uploaded Diagram</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Replace File
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateField('imageUrl', undefined);
+                          updateField('imageAlt', undefined);
+                          setImageError(null);
+                        }}
+                        className="text-xs text-rose-600 hover:text-rose-800 font-medium"
+                      >
+                        Remove Image
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={question.imageUrl}
+                      alt={question.imageAlt || 'Question diagram preview'}
+                      className="max-h-32 max-w-full rounded border border-slate-100 object-contain bg-slate-50 p-1"
+                    />
+                    <div className="flex-1 w-full space-y-1">
+                      <label
+                        htmlFor={`img-alt-${question.id}`}
+                        className="block text-[11px] font-medium text-slate-600"
+                      >
+                        Diagram Caption / Description:
+                      </label>
+                      <input
+                        id={`img-alt-${question.id}`}
+                        type="text"
+                        value={question.imageAlt || ''}
+                        onChange={(e) => updateField('imageAlt', e.target.value)}
+                        placeholder="e.g. Circuit schematic or geometry diagram"
+                        className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                      />
+                    </div>
+                  </div>
+                  {imageError && (
+                    <p className="text-xs text-rose-600 font-medium">{imageError}</p>
+                  )}
                 </div>
               )}
             </div>
