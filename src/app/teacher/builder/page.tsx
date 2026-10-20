@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -32,7 +32,6 @@ import { PublishValidationModal } from '@/components/builder/PublishValidationMo
 
 function QuestionBuilderContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const testIdParam = searchParams.get('testId');
 
   const [test, setTest] = useState<MockTest | null>(null);
