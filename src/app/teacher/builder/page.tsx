@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -11,31 +11,35 @@ import {
   Eye,
   Edit3,
   CheckCircle2,
+  AlertCircle,
+  ArrowRight,
   Clock,
   Award,
   Layers,
   Lock,
-  PauseCircle,
-  StopCircle,
+  Trash2,
 } from 'lucide-react';
 import { MockTest, Question, QuestionType, ExamSettings } from '@/types';
 import {
   getStoredTestById,
   getStoredTests,
   saveStoredTest,
+  deleteStoredTest,
   createDefaultQuestion,
   getDefaultExamSettings,
 } from '@/lib/testStore';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { formatDateTime } from '@/lib/formatters';
 import { QuestionNavigator } from '@/components/builder/QuestionNavigator';
 import { QuestionEditor } from '@/components/builder/QuestionEditor';
 import { StudentPreview } from '@/components/builder/StudentPreview';
-import { TestSettingsModal } from '@/components/builder/TestSettingsModal';
 import { ExamPublishModal } from '@/components/builder/ExamPublishModal';
+import { validateTestForPublish, ValidationError } from '@/components/builder/PublishValidationModal';
 
 function QuestionBuilderContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const testIdParam = searchParams.get('testId');
 
@@ -43,10 +47,11 @@ function QuestionBuilderContent() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeQuestionId, setActiveQuestionId] = useState<string>('');
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false);
+  const [publishValidationErrors, setPublishValidationErrors] = useState<ValidationError[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Load test from storage or fallback
@@ -237,43 +242,35 @@ function QuestionBuilderContent() {
     showToast('Exam settings saved to draft.');
   };
 
-  // Safe Edit Settings Modal Save
-  const handleSaveSettings = (fields: Partial<MockTest>) => {
+  // Direct Publish Action from Bottom Banner with Confirmation
+  const handleDirectPublish = () => {
     if (!test) return;
-    const updatedTest: MockTest = {
-      ...test,
-      ...fields,
-      questions,
-    };
-    saveStoredTest(updatedTest);
-    setTest(updatedTest);
-    showToast('Test metadata updated');
+    const currentSettings = test.settings || getDefaultExamSettings(test);
+    const targetStatus: 'published' | 'scheduled' =
+      currentSettings.scheduleType === 'scheduled' && currentSettings.startDate
+        ? 'scheduled'
+        : 'published';
+
+    handleConfirmPublish(currentSettings, targetStatus);
+    setIsPublishConfirmOpen(false);
   };
 
-  // Re-open for Editing (Pause Exam)
-  const handlePauseExam = () => {
-    if (!test) return;
-    const updatedTest: MockTest = {
-      ...test,
-      status: 'draft',
-    };
-    saveStoredTest(updatedTest);
-    setTest(updatedTest);
-    setIsPauseModalOpen(false);
-    showToast('Exam moved to Draft. Content editing is now unlocked.');
-  };
-
-  // End Exam
-  const handleEndExam = () => {
-    if (!test) return;
-    const updatedTest: MockTest = {
-      ...test,
-      status: 'ended',
-    };
-    saveStoredTest(updatedTest);
-    setTest(updatedTest);
-    setIsCancelModalOpen(false);
-    showToast('Exam has been ended. No further student attempts will be accepted.');
+  // Delete Exam Action
+  const handleDeleteExam = async () => {
+    if (!test || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      deleteStoredTest(test.id);
+      const remaining = getStoredTests();
+      if (remaining.some((t) => t.id === test.id)) {
+        throw new Error('Exam could not be deleted from storage');
+      }
+      setIsDeleteModalOpen(false);
+      router.push('/teacher');
+    } catch (err) {
+      setIsDeleting(false);
+      showToast('Failed to delete exam. The exam was retained.');
+    }
   };
 
   if (!test) {
@@ -290,7 +287,6 @@ function QuestionBuilderContent() {
   const activeQuestion = questions.find((q) => q.id === activeQuestionId) || questions[0];
   const activeIndex = questions.findIndex((q) => q.id === activeQuestionId);
   const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
-  const isLocked = test.status === 'published' || test.status === 'scheduled';
 
   const getStatusBadge = () => {
     switch (test.status) {
@@ -308,6 +304,49 @@ function QuestionBuilderContent() {
         return <Badge variant="neutral" withDot>Draft</Badge>;
     }
   };
+
+  const getBannerStatusText = () => {
+    switch (test.status) {
+      case 'published':
+        return {
+          title: 'Exam is currently Live & Published.',
+          description: test.settings?.hasDeadline && test.settings?.deadlineDate
+            ? `Active for candidates. Final submission cutoff: ${formatDateTime(test.settings.deadlineDate)}.`
+            : 'Questions and answer keys are protected from silent edits while candidates can take the test.',
+        };
+      case 'scheduled':
+        return {
+          title: test.settings?.startDate
+            ? `Exam is Scheduled for ${formatDateTime(test.settings.startDate)}.`
+            : 'Exam is currently Scheduled.',
+          description: test.settings?.hasDeadline && test.settings?.deadlineDate
+            ? `Protected from edits. Cutoff deadline: ${formatDateTime(test.settings.deadlineDate)}.`
+            : 'Questions and answer keys are protected from silent edits while candidates wait for exam launch.',
+        };
+      case 'ended':
+        return {
+          title: 'Exam has Ended.',
+          description: 'Submissions are closed. Review exam configuration and answer key visibility.',
+        };
+      case 'results_released':
+        return {
+          title: 'Exam Results are Released.',
+          description: 'Scores and answers are accessible to candidates according to your release scope.',
+        };
+      case 'pending_review':
+        return {
+          title: 'Exam is Pending Review.',
+          description: 'Subjective question responses require manual evaluation before publishing final scorecards.',
+        };
+      default:
+        return {
+          title: 'Exam is currently in Draft.',
+          description: 'Questions and exam settings can be edited freely before scheduling or publishing live.',
+        };
+    }
+  };
+
+  const bannerText = getBannerStatusText();
 
   return (
     <div className="space-y-5">
@@ -333,15 +372,6 @@ function QuestionBuilderContent() {
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
               {test.title}
             </h1>
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              title="Edit test title and settings"
-              aria-label="Edit test title and settings"
-            >
-              <Settings className="w-4 h-4" strokeWidth={1.75} />
-            </button>
           </div>
         </div>
 
@@ -385,53 +415,54 @@ function QuestionBuilderContent() {
             Save Draft
           </Button>
 
-          {/* Configure & Publish Button */}
+          {/* Delete Exam Button */}
           <Button
-            variant="primary"
+            variant="outline"
             size="md"
-            leftIcon={<Send className="w-4 h-4" strokeWidth={1.75} />}
-            onClick={() => setIsPublishModalOpen(true)}
+            leftIcon={<Trash2 className="w-4 h-4 text-rose-500" strokeWidth={1.75} />}
+            className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 focus-visible:ring-rose-500"
+            onClick={() => setIsDeleteModalOpen(true)}
           >
-            {isLocked ? 'Configure Exam Settings' : 'Publish Test'}
+            Delete Exam
           </Button>
         </div>
       </div>
 
-      {/* Live / Scheduled Integrity Lock Banner */}
-      {isLocked && (
-        <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
-            <div>
-              <p className="font-semibold text-indigo-900">
-                Exam is currently {test.status === 'published' ? 'Live & Published' : 'Scheduled'}.
-              </p>
-              <p className="text-slate-600 mt-0.5">
-                Questions and answer keys are protected from silent edits while candidates can take the test.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<PauseCircle className="w-3.5 h-3.5" />}
-              className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-              onClick={() => setIsPauseModalOpen(true)}
-            >
-              Re-open for Editing (Pause)
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              leftIcon={<StopCircle className="w-3.5 h-3.5" />}
-              onClick={() => setIsCancelModalOpen(true)}
-            >
-              End Exam
-            </Button>
+      {/* Exam Status & Configuration Banner */}
+      <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+          <div>
+            <p className="font-semibold text-indigo-900">
+              {bannerText.title}
+            </p>
+            <p className="text-slate-600 mt-0.5">
+              {bannerText.description}
+            </p>
           </div>
         </div>
-      )}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<Settings className="w-4 h-4" strokeWidth={1.75} />}
+            onClick={() => setIsPublishModalOpen(true)}
+          >
+            Configure Exam Settings
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Send className="w-4 h-4" strokeWidth={1.75} />}
+            onClick={() => {
+              setPublishValidationErrors(validateTestForPublish(questions));
+              setIsPublishConfirmOpen(true);
+            }}
+          >
+            Publish Test
+          </Button>
+        </div>
+      </div>
 
       {/* Summary KPI Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -546,55 +577,190 @@ function QuestionBuilderContent() {
         }}
       />
 
-      {/* Test Metadata Settings Modal */}
-      <TestSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        test={test}
-        onSaveSettings={handleSaveSettings}
-      />
-
-      {/* Pause / Return to Draft Confirmation Modal */}
+      {/* Publish Test Confirmation Modal */}
       <Modal
-        isOpen={isPauseModalOpen}
-        onClose={() => setIsPauseModalOpen(false)}
-        title="Re-open Exam for Editing?"
-        description="This will pause student access and return the exam to Draft status."
-        maxWidth="sm"
+        isOpen={isPublishConfirmOpen}
+        onClose={() => setIsPublishConfirmOpen(false)}
+        title={
+          publishValidationErrors.length > 0
+            ? 'Cannot Publish: Incomplete Questions'
+            : test.status === 'published'
+            ? 'Update Published Exam?'
+            : test.settings?.scheduleType === 'scheduled' && test.settings?.startDate
+            ? 'Confirm Exam Schedule?'
+            : 'Publish Test Live?'
+        }
+        description={
+          publishValidationErrors.length > 0
+            ? 'Please address the following question validation errors before publishing.'
+            : test.status === 'published'
+            ? 'This exam is currently live. Confirming will update the live exam definitions.'
+            : test.settings?.scheduleType === 'scheduled' && test.settings?.startDate
+            ? 'This exam will be scheduled according to your configured timetable.'
+            : 'This exam will immediately become active and accessible to enrolled candidates.'
+        }
+        maxWidth="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 leading-relaxed">
-            While in Draft, new student submissions cannot be initiated. You can freely edit questions and adjust the schedule before republishing.
-          </p>
-          <div className="flex justify-end gap-2.5 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setIsPauseModalOpen(false)}>
-              Keep Exam Active
-            </Button>
-            <Button variant="primary" size="sm" onClick={handlePauseExam}>
-              Pause & Unlock for Editing
-            </Button>
-          </div>
+          {publishValidationErrors.length > 0 ? (
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-rose-950">
+                    {publishValidationErrors.length} validation {publishValidationErrors.length === 1 ? 'issue' : 'issues'} found
+                  </p>
+                  <p className="text-rose-800 mt-0.5 leading-relaxed">
+                    All questions require complete statements, valid answer keys, and appropriate scoring rules.
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                {publishValidationErrors.map((err, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white text-xs hover:border-indigo-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                      <span className="text-slate-700 truncate">{err.message}</span>
+                    </div>
+                    {err.questionId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveQuestionId(err.questionId);
+                          setMode('edit');
+                          setIsPublishConfirmOpen(false);
+                        }}
+                        className="text-xs font-medium text-[#4F46E5] hover:text-[#4338CA] shrink-0 inline-flex items-center gap-1"
+                      >
+                        <span>Fix</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" size="sm" onClick={() => setIsPublishConfirmOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-emerald-950">
+                    Validation Passed ({questions.length} questions, {totalMarks} pts)
+                  </p>
+                  <p className="text-emerald-800 mt-0.5 leading-relaxed">
+                    All question definitions, answer keys, and scoring criteria are complete and verified.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status & Schedule Summary Box */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Current Status:</span>
+                  <span className="font-semibold text-slate-800 capitalize">
+                    {test.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Target State:</span>
+                  <span className="font-semibold text-indigo-700">
+                    {test.settings?.scheduleType === 'scheduled' && test.settings?.startDate
+                      ? 'Scheduled Exam'
+                      : 'Live & Published'}
+                  </span>
+                </div>
+                {test.settings?.scheduleType === 'scheduled' && test.settings?.startDate ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Scheduled Start:</span>
+                    <span className="font-medium text-slate-800">
+                      {formatDateTime(test.settings.startDate)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Availability:</span>
+                    <span className="font-medium text-slate-800">Immediate access upon publish</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Duration:</span>
+                  <span className="font-medium text-slate-800">
+                    {test.settings?.durationMinutes || test.durationMinutes} minutes
+                  </span>
+                </div>
+                {test.settings?.hasDeadline && test.settings?.deadlineDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Cutoff Deadline:</span>
+                    <span className="font-medium text-slate-800">
+                      {formatDateTime(test.settings.deadlineDate)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setIsPublishConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Send className="w-3.5 h-3.5" />}
+                  onClick={handleDirectPublish}
+                >
+                  {test.settings?.scheduleType === 'scheduled' && test.settings?.startDate
+                    ? 'Confirm & Schedule Exam'
+                    : test.status === 'published'
+                    ? 'Confirm & Update Live Exam'
+                    : 'Confirm & Publish Live'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
-      {/* End / Cancel Exam Confirmation Modal */}
+      {/* Delete Exam Confirmation Modal */}
       <Modal
-        isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
-        title="End Examination?"
-        description="This will permanently close the exam to any new student submissions."
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) setIsDeleteModalOpen(false);
+        }}
+        title="Delete this exam?"
         maxWidth="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600 leading-relaxed">
-            Are you sure you want to end this examination? The status will transition to <strong>Ended</strong> and answer keys or results will be eligible for release according to your configuration.
+            Are you sure you want to delete &quot;{test.title}&quot;? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-2.5 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setIsCancelModalOpen(false)}>
-              Keep Active
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isDeleting}
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
             </Button>
-            <Button variant="danger" size="sm" onClick={handleEndExam}>
-              Confirm & End Exam
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={isDeleting}
+              disabled={isDeleting}
+              onClick={handleDeleteExam}
+            >
+              Delete Exam
             </Button>
           </div>
         </div>

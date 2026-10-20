@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Clock,
   Award,
@@ -13,11 +13,13 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Calendar,
+  Play,
 } from 'lucide-react';
 import { Question, MockTest } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, formatCountdown } from '@/lib/formatters';
 
 interface StudentPreviewProps {
   test: MockTest;
@@ -58,17 +60,84 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
   // Student answers state
   const [answers, setAnswers] = useState<{ [qId: string]: string | string[] }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(durationMins * 60);
   const [isAutoSubmittedModal, setIsAutoSubmittedModal] = useState(false);
+  const [hasStartedEarly, setHasStartedEarly] = useState(false);
+
+  // Scheduled Start countdown calculation
+  const scheduledStartMs = useMemo(() => {
+    if (settings?.scheduleType === 'scheduled' && settings?.startDate) {
+      const ms = new Date(settings.startDate).getTime();
+      return isNaN(ms) ? undefined : ms;
+    }
+    return undefined;
+  }, [settings?.scheduleType, settings?.startDate]);
+
+  const [secondsUntilStart, setSecondsUntilStart] = useState<number>(() => {
+    if (scheduledStartMs) {
+      return Math.max(0, Math.floor((scheduledStartMs - Date.now()) / 1000));
+    }
+    return 0;
+  });
+
+  const isScheduledWaiting = Boolean(
+    scheduledStartMs && scheduledStartMs > Date.now() && !hasStartedEarly && secondsUntilStart > 0
+  );
+
+  // Calculate base exam duration bounded by optional final cutoff deadline
+  const calculateInitialSeconds = useCallback(() => {
+    let secs = durationMins * 60;
+    if (settings?.hasDeadline && settings?.deadlineDate) {
+      const deadlineMs = new Date(settings.deadlineDate).getTime();
+      if (!isNaN(deadlineMs)) {
+        const remainingToDeadline = Math.max(0, Math.floor((deadlineMs - Date.now()) / 1000));
+        secs = Math.min(secs, remainingToDeadline);
+      }
+    }
+    return Math.max(0, secs);
+  }, [durationMins, settings?.hasDeadline, settings?.deadlineDate]);
+
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(calculateInitialSeconds);
 
   const activeQuestion = questions[currentIdx];
   const totalMarks = questions.reduce((acc, q) => acc + (q.marks || 0), 0);
   const subjectiveQuestions = questions.filter((q) => q.type === 'subjective');
   const hasSubjective = subjectiveQuestions.length > 0;
 
-  // Real-time countdown timer
+  // Sync timers whenever test settings (duration, deadline, schedule) change
   useEffect(() => {
-    if (isSubmitted) return;
+    if (scheduledStartMs) {
+      const diff = Math.max(0, Math.floor((scheduledStartMs - Date.now()) / 1000));
+      setSecondsUntilStart(diff);
+      if (diff > 0) {
+        setHasStartedEarly(false);
+      }
+    } else {
+      setSecondsUntilStart(0);
+    }
+
+    if (!isSubmitted) {
+      setTimeLeftSeconds(calculateInitialSeconds());
+    }
+  }, [test.id, scheduledStartMs, isSubmitted, calculateInitialSeconds]);
+
+  // Scheduled countdown interval (1s tick)
+  useEffect(() => {
+    if (!scheduledStartMs || hasStartedEarly) return;
+
+    const interval = setInterval(() => {
+      const diff = Math.max(0, Math.floor((scheduledStartMs - Date.now()) / 1000));
+      setSecondsUntilStart(diff);
+      if (diff <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [scheduledStartMs, hasStartedEarly]);
+
+  // Real-time active countdown timer
+  useEffect(() => {
+    if (isSubmitted || isScheduledWaiting) return;
 
     const interval = setInterval(() => {
       setTimeLeftSeconds((prev) => {
@@ -83,11 +152,15 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isSubmitted]);
+  }, [isSubmitted, isScheduledWaiting]);
 
   const formatTimer = (secs: number) => {
-    const m = Math.floor(secs / 60);
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
+    if (h > 0) {
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -221,23 +294,33 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Active Countdown Timer */}
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums transition-colors ${
-              isTimeCritical
-                ? 'bg-rose-500/30 text-rose-200 border border-rose-400 animate-pulse font-bold'
-                : isTimeLow
-                ? 'bg-amber-500/30 text-amber-200 border border-amber-400'
-                : 'bg-slate-800 text-slate-200 border border-slate-700'
-            }`}
-            title="Time Remaining"
-          >
-            <Clock className={`w-3.5 h-3.5 ${isTimeCritical ? 'text-rose-400' : 'text-indigo-400'}`} />
-            <span>{formatTimer(timeLeftSeconds)}</span>
-          </div>
+          {/* Active Countdown Timer / Scheduled Countdown */}
+          {isScheduledWaiting ? (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums bg-amber-500/30 text-amber-200 border border-amber-400"
+              title={`Scheduled to start: ${settings?.startDate ? formatDateTime(settings.startDate) : ''}`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Starts in: {formatCountdown(secondsUntilStart)}</span>
+            </div>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums transition-colors ${
+                isTimeCritical
+                  ? 'bg-rose-500/30 text-rose-200 border border-rose-400 animate-pulse font-bold'
+                  : isTimeLow
+                  ? 'bg-amber-500/30 text-amber-200 border border-amber-400'
+                  : 'bg-slate-800 text-slate-200 border border-slate-700'
+              }`}
+              title="Time Remaining"
+            >
+              <Clock className={`w-3.5 h-3.5 ${isTimeCritical ? 'text-rose-400' : 'text-indigo-400'}`} />
+              <span>{formatTimer(timeLeftSeconds)}</span>
+            </div>
+          )}
 
           {/* Instructor Demo Fast-Forward Button */}
-          {!isSubmitted && timeLeftSeconds > 60 && (
+          {!isSubmitted && !isScheduledWaiting && timeLeftSeconds > 45 && (
             <button
               type="button"
               onClick={handleFastForwardTimer}
@@ -264,6 +347,45 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Scheduled Exam Waiting Banner */}
+      {isScheduledWaiting && (
+        <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 text-amber-950 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-in slide-in-from-top">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-900">
+                Exam Scheduled for {settings?.startDate ? formatDateTime(settings.startDate) : 'configured time'}
+              </p>
+              <p className="text-amber-800 mt-0.5">
+                Countdown until start: <span className="font-mono font-bold text-amber-950">{formatCountdown(secondsUntilStart)}</span>. Students will see this waiting countdown until launch.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHasStartedEarly(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs transition-colors shrink-0 shadow-xs"
+            title="Simulate active test taking right now"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Simulate: Start Exam Now</span>
+          </button>
+        </div>
+      )}
+
+      {/* Submission Cutoff Deadline Notice */}
+      {settings?.hasDeadline && settings?.deadlineDate && !isSubmitted && !isScheduledWaiting && (
+        <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-slate-600 text-xs flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-slate-500" />
+            <span>Final Submission Cutoff: <strong>{formatDateTime(settings.deadlineDate)}</strong></span>
+          </span>
+          <span className="text-[11px] text-slate-500">
+            Auto-submits when individual timer reaches 00:00 or cutoff arrives.
+          </span>
+        </div>
+      )}
 
       {/* Critical 1-Minute Warning Banner */}
       {isTimeCritical && !isSubmitted && (

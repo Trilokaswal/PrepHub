@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import {
   FileText,
   Calendar,
-  Users,
   Clock,
   Plus,
   Download,
   AlertCircle,
   RotateCcw,
+  CheckCircle2,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentTestsTable } from '@/components/dashboard/RecentTestsTable';
@@ -18,11 +18,9 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import {
   mockTeacherProfile,
-  mockDashboardStats,
   initialMockTests,
 } from '@/data/mockData';
 import { MockTest } from '@/types';
-import { formatNumber } from '@/lib/formatters';
 import {
   getStoredTests,
   deleteStoredTest,
@@ -54,8 +52,8 @@ export default function TeacherDashboardPage() {
 
   // Calculate live dynamic counts based on local test state
   const totalTestsCount = tests.length;
-  const upcomingTestsCount = tests.filter((t) => t.status === 'scheduled').length;
-  const totalAttemptsCount = tests.reduce((acc, t) => acc + t.totalAttempts, 0);
+  const liveTestsCount = tests.filter((t) => t.status === 'published').length;
+  const scheduledTestsCount = tests.filter((t) => t.status === 'scheduled').length;
   const pendingReviewCount = tests.filter((t) => t.status === 'pending_review').length;
 
   const handleTestCreated = (newTest: MockTest) => {
@@ -83,15 +81,13 @@ export default function TeacherDashboardPage() {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Welcome Header & Primary Actions */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-                Welcome back, {mockTeacherProfile.name.split(' ')[0]}
-              </h1>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+              Welcome back, {mockTeacherProfile.name.split(' ')[0]}
+            </h1>
             <p className="text-sm text-slate-500 max-w-2xl">
               Manage your mock examinations, review student attempt metrics, and evaluate pending grading queues for {mockTeacherProfile.department}.
             </p>
@@ -117,42 +113,34 @@ export default function TeacherDashboardPage() {
           </div>
         </div>
 
-        {/* 4 Stat Cards */}
+        {/* 4 Compact Stat Cards */}
         <section aria-label="Performance Statistics">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
             <StatCard
               title="Total Tests"
               value={totalTestsCount}
-              change={mockDashboardStats.totalTests.change}
-              isPositive={mockDashboardStats.totalTests.isPositive}
-              period={mockDashboardStats.totalTests.period}
+              subtitle={`${totalTestsCount} ${totalTestsCount === 1 ? 'test' : 'tests'} in catalog`}
               icon={<FileText className="w-5 h-5" strokeWidth={1.75} />}
-              iconBgColor="bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100"
+              iconBgColor="bg-indigo-50 text-[#4F46E5] border border-indigo-100"
             />
             <StatCard
-              title="Upcoming Tests"
-              value={upcomingTestsCount}
-              change={mockDashboardStats.upcomingTests.change}
-              isPositive={mockDashboardStats.upcomingTests.isPositive}
-              period={mockDashboardStats.upcomingTests.period}
+              title="Live Tests"
+              value={liveTestsCount}
+              subtitle={`${liveTestsCount} ${liveTestsCount === 1 ? 'test' : 'tests'} accepting attempts`}
+              icon={<CheckCircle2 className="w-5 h-5" strokeWidth={1.75} />}
+              iconBgColor="bg-emerald-50 text-emerald-600 border border-emerald-100"
+            />
+            <StatCard
+              title="Scheduled Tests"
+              value={scheduledTestsCount}
+              subtitle={`${scheduledTestsCount} ${scheduledTestsCount === 1 ? 'test' : 'tests'} upcoming`}
               icon={<Calendar className="w-5 h-5" strokeWidth={1.75} />}
               iconBgColor="bg-sky-50 text-sky-600 border border-sky-100"
             />
             <StatCard
-              title="Total Attempts"
-              value={formatNumber(totalAttemptsCount)}
-              change={mockDashboardStats.totalAttempts.change}
-              isPositive={mockDashboardStats.totalAttempts.isPositive}
-              period={mockDashboardStats.totalAttempts.period}
-              icon={<Users className="w-5 h-5" strokeWidth={1.75} />}
-              iconBgColor="bg-emerald-50 text-emerald-600 border border-emerald-100"
-            />
-            <StatCard
-              title="Pending Review"
+              title="Needs Grading"
               value={pendingReviewCount}
-              change={mockDashboardStats.pendingReview.change}
-              isPositive={mockDashboardStats.pendingReview.isPositive}
-              period={mockDashboardStats.pendingReview.period}
+              subtitle={`${pendingReviewCount} ${pendingReviewCount === 1 ? 'submission' : 'submissions'} to evaluate`}
               icon={<Clock className="w-5 h-5" strokeWidth={1.75} />}
               iconBgColor="bg-amber-50 text-amber-600 border border-amber-100"
             />
@@ -161,14 +149,14 @@ export default function TeacherDashboardPage() {
 
         {/* Actionable Notice for Grading Queue */}
         {pendingReviewCount > 0 && (
-          <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-900">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm text-amber-950">
             <div className="flex items-center gap-3">
               <span className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0">
                 <AlertCircle className="w-5 h-5" strokeWidth={1.75} />
               </span>
               <div>
-                <p className="font-medium text-slate-900">
-                  {pendingReviewCount} test submissions require manual grading
+                <p className="font-semibold text-slate-900">
+                  {pendingReviewCount} {pendingReviewCount === 1 ? 'test submission requires' : 'test submissions require'} manual grading
                 </p>
                 <p className="text-xs text-slate-600 mt-0.5">
                   Subjective answers in Organic Chemistry & Modern World History await evaluation.
@@ -178,7 +166,7 @@ export default function TeacherDashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100/50 self-start sm:self-auto shrink-0"
+              className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100/50 self-start sm:self-auto shrink-0 font-medium"
               onClick={() =>
                 setDemoNotice({
                   isOpen: true,

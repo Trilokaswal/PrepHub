@@ -25,7 +25,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { getDefaultExamSettings } from '@/lib/testStore';
-import { formatDate, formatDateTime } from '@/lib/formatters';
+import { formatDate, formatDateTime, toLocalDatetimeString, fromLocalDatetimeString } from '@/lib/formatters';
 import { validateTestForPublish, ValidationError } from './PublishValidationModal';
 
 interface ExamPublishModalProps {
@@ -267,14 +267,21 @@ export const ExamPublishModal: React.FC<ExamPublishModalProps> = ({
 
               {settings.scheduleType === 'scheduled' && (
                 <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
-                  <label htmlFor="exam-start-date" className="block text-xs font-medium text-slate-700">
-                    Scheduled Start Date & Time (UTC)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="exam-start-date" className="block text-xs font-medium text-slate-700">
+                      Scheduled Start Date & Time
+                    </label>
+                    {settings.startDate && (
+                      <span className="text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        {formatDateTime(settings.startDate)}
+                      </span>
+                    )}
+                  </div>
                   <input
                     id="exam-start-date"
                     type="datetime-local"
-                    value={settings.startDate ? settings.startDate.slice(0, 16) : ''}
-                    onChange={(e) => updateSetting('startDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                    value={toLocalDatetimeString(settings.startDate)}
+                    onChange={(e) => updateSetting('startDate', fromLocalDatetimeString(e.target.value))}
                     className="w-full sm:w-72 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
                   <p className="text-[11px] text-slate-500">
@@ -304,14 +311,21 @@ export const ExamPublishModal: React.FC<ExamPublishModalProps> = ({
 
               {settings.hasDeadline && (
                 <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-                  <label htmlFor="exam-deadline-date" className="block text-xs font-medium text-slate-700">
-                    Submission Cutoff Date & Time (UTC)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="exam-deadline-date" className="block text-xs font-medium text-slate-700">
+                      Submission Cutoff Date & Time
+                    </label>
+                    {settings.deadlineDate && (
+                      <span className="text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        {formatDateTime(settings.deadlineDate)}
+                      </span>
+                    )}
+                  </div>
                   <input
                     id="exam-deadline-date"
                     type="datetime-local"
-                    value={settings.deadlineDate ? settings.deadlineDate.slice(0, 16) : ''}
-                    onChange={(e) => updateSetting('deadlineDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                    value={toLocalDatetimeString(settings.deadlineDate)}
+                    onChange={(e) => updateSetting('deadlineDate', fromLocalDatetimeString(e.target.value))}
                     className="w-full sm:w-72 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
                   <div className="p-2.5 rounded bg-sky-50 border border-sky-100 text-xs text-sky-800 flex items-start gap-2">
@@ -545,8 +559,8 @@ export const ExamPublishModal: React.FC<ExamPublishModalProps> = ({
                   <div className="pt-2">
                     <input
                       type="datetime-local"
-                      value={settings.scheduledAnswerReleaseDate ? settings.scheduledAnswerReleaseDate.slice(0, 16) : ''}
-                      onChange={(e) => updateSetting('scheduledAnswerReleaseDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                      value={toLocalDatetimeString(settings.scheduledAnswerReleaseDate)}
+                      onChange={(e) => updateSetting('scheduledAnswerReleaseDate', fromLocalDatetimeString(e.target.value))}
                       className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                     />
                   </div>
@@ -615,8 +629,8 @@ export const ExamPublishModal: React.FC<ExamPublishModalProps> = ({
                 <div className="pt-2">
                   <input
                     type="datetime-local"
-                    value={settings.scheduledResultsDate ? settings.scheduledResultsDate.slice(0, 16) : ''}
-                    onChange={(e) => updateSetting('scheduledResultsDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                    value={toLocalDatetimeString(settings.scheduledResultsDate)}
+                    onChange={(e) => updateSetting('scheduledResultsDate', fromLocalDatetimeString(e.target.value))}
                     className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
                 </div>

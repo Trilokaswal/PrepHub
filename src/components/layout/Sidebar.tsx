@@ -106,18 +106,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         {navigationItems.map((item) => {
           const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={(e) => handleNavClick(e, item)}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 ${
-                isActive
-                  ? 'bg-indigo-50 text-[#4F46E5]'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-              aria-current={isActive ? 'page' : undefined}
-            >
+          const itemClasses = `w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 ${
+            isActive
+              ? 'bg-indigo-50 text-[#4F46E5]'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          }`;
+
+          const content = (
+            <>
               <div className="flex items-center gap-3">
                 <span
                   className={
@@ -146,6 +142,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 )}
               </div>
+            </>
+          );
+
+          if (!item.isImplemented) {
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={(e) => handleNavClick(e, item)}
+                className={itemClasses}
+              >
+                {content}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={itemClasses}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {content}
             </Link>
           );
         })}
@@ -192,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Desktop Fixed Left Sidebar */}
       <aside
-        className="hidden md:fixed md:inset-y-0 md:left-0 md:z-30 md:flex md:w-64 md:flex-col border-r border-slate-200/90 shadow-xs"
+        className="hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:w-64 md:flex-col border-r border-slate-200/90 shadow-xs"
         aria-label="Desktop Sidebar"
       >
         {sidebarContent}
