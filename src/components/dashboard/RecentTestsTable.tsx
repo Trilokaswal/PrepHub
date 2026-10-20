@@ -132,20 +132,20 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.75} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by test title or subject..."
-            className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-shadow"
+            className="w-full pl-10 pr-12 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-shadow"
             aria-label="Search tests"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 p-1"
-              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 hover:text-slate-700 p-1 rounded"
+              aria-label="Clear search query"
             >
               Clear
             </button>
@@ -223,30 +223,30 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
       </div>
 
       {/* Desktop / Tablet Table View */}
-      <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+      <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200/80 bg-slate-50/75 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                <th scope="col" className="py-3.5 px-4 sm:px-6">
+              <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-medium text-slate-500">
+                <th scope="col" className="py-3 px-4 sm:px-6">
                   Test Details
                 </th>
-                <th scope="col" className="py-3.5 px-4">
+                <th scope="col" className="py-3 px-4">
                   Subject
                 </th>
-                <th scope="col" className="py-3.5 px-4 text-center">
+                <th scope="col" className="py-3 px-4 text-center">
                   Questions
                 </th>
-                <th scope="col" className="py-3.5 px-4 text-center">
+                <th scope="col" className="py-3 px-4 text-center">
                   Duration
                 </th>
-                <th scope="col" className="py-3.5 px-4">
+                <th scope="col" className="py-3 px-4">
                   Status
                 </th>
-                <th scope="col" className="py-3.5 px-4 text-center">
+                <th scope="col" className="py-3 px-4 text-center">
                   Attempts
                 </th>
-                <th scope="col" className="py-3.5 px-4 sm:px-6 text-right">
+                <th scope="col" className="py-3 px-4 sm:px-6 text-right">
                   Actions
                 </th>
               </tr>
@@ -256,17 +256,17 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 filteredTests.map((test) => (
                   <tr
                     key={test.id}
-                    className="hover:bg-indigo-50/20 transition-colors group"
+                    className="hover:bg-slate-50/75 transition-colors group"
                   >
                     {/* Test Title & ID */}
-                    <td className="py-4 px-4 sm:px-6">
-                      <div className="font-semibold text-slate-900 group-hover:text-[#4F46E5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-6">
+                      <div className="font-medium text-slate-900 group-hover:text-[#4F46E5] transition-colors">
                         {test.title}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
                         <span>ID: {test.id}</span>
                         {test.scheduledDate && (
-                          <span className="text-sky-600 font-medium">
+                          <span className="text-sky-700 font-medium">
                             • Starts {formatDate(test.scheduledDate)}
                           </span>
                         )}
@@ -274,69 +274,69 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                     </td>
 
                     {/* Subject */}
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200/60">
                         {test.subject}
                       </span>
                     </td>
 
                     {/* Question Count */}
-                    <td className="py-4 px-4 text-center text-slate-700 font-medium">
+                    <td className="py-3.5 px-4 text-center text-slate-700 tabular-nums">
                       {test.questionCount}
                     </td>
 
                     {/* Duration */}
-                    <td className="py-4 px-4 text-center text-slate-700">
-                      <span className="inline-flex items-center gap-1 text-xs">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <td className="py-3.5 px-4 text-center text-slate-700">
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-600 tabular-nums">
+                        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.75} />
                         {test.durationMinutes} min
                       </span>
                     </td>
 
                     {/* Status */}
-                    <td className="py-4 px-4 whitespace-nowrap">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {getStatusBadge(test.status)}
                     </td>
 
                     {/* Attempts & Avg */}
-                    <td className="py-4 px-4 text-center">
-                      <div className="font-medium text-slate-800">
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="font-medium text-slate-800 tabular-nums">
                         {formatNumber(test.totalAttempts)}
                       </div>
                       {test.averageScore !== undefined && (
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-xs text-slate-500 tabular-nums">
                           avg {test.averageScore}%
                         </div>
                       )}
                     </td>
 
                     {/* Action buttons */}
-                    <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
+                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setSelectedTest(test)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#4F46E5] hover:bg-indigo-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#4F46E5] hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 transition-colors"
                           title="View test details"
                           aria-label={`View details for ${test.title}`}
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4" strokeWidth={1.75} />
                         </button>
                         <button
                           onClick={() => handleEditClick(test)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 transition-colors"
                           title="Edit test (demo)"
                           aria-label={`Edit ${test.title}`}
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4" strokeWidth={1.75} />
                         </button>
                         {onDeleteTest && (
                           <button
                             onClick={() => setTestToDelete(test)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 transition-colors"
                             title="Remove test"
                             aria-label={`Delete ${test.title}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                           </button>
                         )}
                       </div>
@@ -347,13 +347,13 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 <tr>
                   <td colSpan={7} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <div className="p-3 bg-slate-100 rounded-full text-slate-400">
-                        <AlertCircle className="w-6 h-6" />
+                      <div className="p-2.5 bg-slate-100 rounded-lg text-slate-400">
+                        <Search className="w-5 h-5" strokeWidth={1.75} />
                       </div>
-                      <p className="text-sm font-semibold text-slate-700">
+                      <p className="text-sm font-medium text-slate-800">
                         No tests match your filter criteria
                       </p>
-                      <p className="text-xs text-slate-400 max-w-sm">
+                      <p className="text-xs text-slate-500 max-w-sm">
                         Try clearing your search query or changing the status and subject filters.
                       </p>
                       <Button
@@ -379,11 +379,11 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
           filteredTests.map((test) => (
             <div
               key={test.id}
-              className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-sm space-y-3"
+              className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h4 className="font-semibold text-slate-900 text-sm leading-snug">
+                  <h4 className="font-medium text-slate-900 text-sm leading-snug">
                     {test.title}
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">ID: {test.id}</p>
@@ -393,32 +393,32 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
 
               <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-100 text-slate-600">
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">
+                  <span className="text-slate-400 block text-xs">
                     Subject
                   </span>
                   <span className="font-medium text-slate-800">{test.subject}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">
+                  <span className="text-slate-400 block text-xs">
                     Duration
                   </span>
-                  <span className="font-medium text-slate-800">
-                    {test.durationMinutes} mins ({test.questionCount} Qs)
+                  <span className="font-medium text-slate-800 tabular-nums">
+                    {test.durationMinutes} min ({test.questionCount} Qs)
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">
+                  <span className="text-slate-400 block text-xs">
                     Attempts
                   </span>
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium text-slate-800 tabular-nums">
                     {formatNumber(test.totalAttempts)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">
+                  <span className="text-slate-400 block text-xs">
                     Avg Score
                   </span>
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium text-slate-800 tabular-nums">
                     {test.averageScore !== undefined ? `${test.averageScore}%` : 'N/A'}
                   </span>
                 </div>
@@ -428,7 +428,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  leftIcon={<Eye className="w-3.5 h-3.5" />}
+                  leftIcon={<Eye className="w-3.5 h-3.5" strokeWidth={1.75} />}
                   onClick={() => setSelectedTest(test)}
                 >
                   View Details
@@ -436,18 +436,20 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleEditClick(test)}
-                    className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                     aria-label={`Edit ${test.title}`}
+                    title="Edit test"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   {onDeleteTest && (
                     <button
                       onClick={() => setTestToDelete(test)}
-                      className="p-2 rounded-lg text-rose-500 hover:bg-rose-50"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                       aria-label={`Delete ${test.title}`}
+                      title="Delete test"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   )}
                 </div>
@@ -456,8 +458,8 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
           ))
         ) : (
           <div className="bg-white rounded-xl border border-slate-200/90 p-8 text-center space-y-3">
-            <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
-            <p className="text-sm font-semibold text-slate-700">
+            <Search className="w-6 h-6 text-slate-400 mx-auto" strokeWidth={1.5} />
+            <p className="text-sm font-medium text-slate-800">
               No matching tests found
             </p>
             <Button variant="secondary" size="sm" onClick={handleClearFilters}>
@@ -478,7 +480,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
         {selectedTest && (
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-medium text-slate-500">
                 Current Status
               </span>
               {getStatusBadge(selectedTest.status)}
@@ -487,25 +489,25 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
                 <span className="text-xs text-slate-400 block">Total Questions</span>
-                <span className="text-base font-bold text-slate-800">
+                <span className="text-base font-semibold text-slate-800 tabular-nums">
                   {selectedTest.questionCount}
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
                 <span className="text-xs text-slate-400 block">Time Limit</span>
-                <span className="text-base font-bold text-slate-800">
+                <span className="text-base font-semibold text-slate-800 tabular-nums">
                   {selectedTest.durationMinutes} min
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
                 <span className="text-xs text-slate-400 block">Student Attempts</span>
-                <span className="text-base font-bold text-slate-800">
+                <span className="text-base font-semibold text-slate-800 tabular-nums">
                   {selectedTest.totalAttempts}
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
                 <span className="text-xs text-slate-400 block">Average Score</span>
-                <span className="text-base font-bold text-slate-800">
+                <span className="text-base font-semibold text-slate-800 tabular-nums">
                   {selectedTest.averageScore !== undefined
                     ? `${selectedTest.averageScore}%`
                     : 'N/A (No attempts)'}
@@ -520,7 +522,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
             </div>
 
             <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-800 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.75} />
               <span>
                 <strong>Static Mock Preview:</strong> Student submission review and question editing will be linked when database APIs are integrated.
               </span>

@@ -9,7 +9,6 @@ import {
   Plus,
   Download,
   AlertCircle,
-  Sparkles,
   RotateCcw,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -72,8 +71,8 @@ export default function TeacherDashboardPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                Welcome back, {mockTeacherProfile.name.split(' ')[0]} 👋
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+                Welcome back, {mockTeacherProfile.name.split(' ')[0]}
               </h1>
             </div>
             <p className="text-sm text-slate-500 max-w-2xl">
@@ -85,7 +84,7 @@ export default function TeacherDashboardPage() {
             <Button
               variant="outline"
               size="md"
-              leftIcon={<Download className="w-4 h-4" />}
+              leftIcon={<Download className="w-4 h-4" strokeWidth={1.75} />}
               onClick={handleExportClick}
             >
               Export
@@ -93,7 +92,7 @@ export default function TeacherDashboardPage() {
             <Button
               variant="primary"
               size="md"
-              leftIcon={<Plus className="w-4 h-4" />}
+              leftIcon={<Plus className="w-4 h-4" strokeWidth={1.75} />}
               onClick={() => setIsCreateModalOpen(true)}
             >
               Create New Test
@@ -110,8 +109,8 @@ export default function TeacherDashboardPage() {
               change={mockDashboardStats.totalTests.change}
               isPositive={mockDashboardStats.totalTests.isPositive}
               period={mockDashboardStats.totalTests.period}
-              icon={<FileText className="w-6 h-6" />}
-              iconBgColor="bg-[#EEF2FF] text-[#4F46E5]"
+              icon={<FileText className="w-5 h-5" strokeWidth={1.75} />}
+              iconBgColor="bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100"
             />
             <StatCard
               title="Upcoming Tests"
@@ -119,8 +118,8 @@ export default function TeacherDashboardPage() {
               change={mockDashboardStats.upcomingTests.change}
               isPositive={mockDashboardStats.upcomingTests.isPositive}
               period={mockDashboardStats.upcomingTests.period}
-              icon={<Calendar className="w-6 h-6" />}
-              iconBgColor="bg-sky-50 text-sky-600"
+              icon={<Calendar className="w-5 h-5" strokeWidth={1.75} />}
+              iconBgColor="bg-sky-50 text-sky-600 border border-sky-100"
             />
             <StatCard
               title="Total Attempts"
@@ -128,8 +127,8 @@ export default function TeacherDashboardPage() {
               change={mockDashboardStats.totalAttempts.change}
               isPositive={mockDashboardStats.totalAttempts.isPositive}
               period={mockDashboardStats.totalAttempts.period}
-              icon={<Users className="w-6 h-6" />}
-              iconBgColor="bg-emerald-50 text-emerald-600"
+              icon={<Users className="w-5 h-5" strokeWidth={1.75} />}
+              iconBgColor="bg-emerald-50 text-emerald-600 border border-emerald-100"
             />
             <StatCard
               title="Pending Review"
@@ -137,21 +136,21 @@ export default function TeacherDashboardPage() {
               change={mockDashboardStats.pendingReview.change}
               isPositive={mockDashboardStats.pendingReview.isPositive}
               period={mockDashboardStats.pendingReview.period}
-              icon={<Clock className="w-6 h-6" />}
-              iconBgColor="bg-amber-50 text-amber-600"
+              icon={<Clock className="w-5 h-5" strokeWidth={1.75} />}
+              iconBgColor="bg-amber-50 text-amber-600 border border-amber-100"
             />
           </div>
         </section>
 
         {/* Actionable Notice for Grading Queue */}
         {pendingReviewCount > 0 && (
-          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-900">
+          <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-900">
             <div className="flex items-center gap-3">
               <span className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0">
-                <AlertCircle className="w-5 h-5" />
+                <AlertCircle className="w-5 h-5" strokeWidth={1.75} />
               </span>
               <div>
-                <p className="font-semibold text-slate-900">
+                <p className="font-medium text-slate-900">
                   {pendingReviewCount} test submissions require manual grading
                 </p>
                 <p className="text-xs text-slate-600 mt-0.5">
@@ -181,7 +180,7 @@ export default function TeacherDashboardPage() {
         <section aria-label="Recent Tests Section" className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-lg font-semibold text-slate-900 tracking-tight">
                 Recent Mock Tests
               </h2>
               <p className="text-xs sm:text-sm text-slate-500">
@@ -192,7 +191,7 @@ export default function TeacherDashboardPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                leftIcon={<RotateCcw className="w-3.5 h-3.5" strokeWidth={1.75} />}
                 onClick={handleResetSampleData}
                 className="text-xs text-slate-500 hover:text-slate-800 self-start sm:self-auto"
               >

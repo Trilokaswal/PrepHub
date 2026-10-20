@@ -61,7 +61,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         />
       ) : (
         <div
-          className="flex h-full w-full items-center justify-center rounded-full bg-indigo-100 text-[#4F46E5] font-semibold ring-1 ring-indigo-200"
+          className="flex h-full w-full items-center justify-center rounded-full bg-indigo-50 text-[#4F46E5] font-medium ring-1 ring-indigo-200/70"
           aria-label={alt}
         >
           {getInitials(name || alt)}

@@ -35,7 +35,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       {/* Accessibility Skip Link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#4F46E5] focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#4F46E5] focus:text-white focus:rounded-lg focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
       >
         Skip to main content
       </a>
@@ -59,9 +59,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </main>
 
         {/* Global Honest Footer */}
-        <footer className="py-4 px-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
+        <footer className="py-3 px-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
           <p>
-            PrepHub Mock Test Platform • <span className="font-semibold text-slate-700">Frontend Foundation Phase</span> (Local Static Mock Data • No Database Connected)
+            PrepHub Examination Platform • <span className="font-medium text-slate-700">Frontend Foundation Phase</span> (Local Static Mock Data • No Database Connected)
           </p>
         </footer>
       </div>

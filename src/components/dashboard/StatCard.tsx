@@ -19,40 +19,40 @@ export const StatCard: React.FC<StatCardProps> = ({
   isPositive,
   period,
   icon,
-  iconBgColor = 'bg-[#EEF2FF] text-[#4F46E5]',
+  iconBgColor = 'bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100',
 }) => {
   return (
-    <Card hoverable className="p-5 sm:p-6 transition-all">
+    <Card hoverable className="p-5 transition-colors">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-xs sm:text-sm font-medium text-slate-500 uppercase tracking-wider">
+          <p className="text-sm font-medium text-slate-500">
             {title}
           </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <p className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight tabular-nums">
             {value}
           </p>
         </div>
-        <div className={`p-3 rounded-xl shrink-0 ${iconBgColor}`}>
+        <div className={`p-2.5 rounded-lg shrink-0 ${iconBgColor}`}>
           {icon}
         </div>
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
         <span
-          className={`inline-flex items-center gap-1 font-semibold ${
+          className={`inline-flex items-center gap-1 font-medium ${
             isPositive === true
-              ? 'text-emerald-600'
+              ? 'text-emerald-700'
               : isPositive === false
-              ? 'text-amber-600'
+              ? 'text-amber-700'
               : 'text-slate-500'
           }`}
         >
-          {isPositive === true && <ArrowUpRight className="w-3.5 h-3.5" />}
-          {isPositive === false && <ArrowDownRight className="w-3.5 h-3.5" />}
-          {isPositive === undefined && <Minus className="w-3.5 h-3.5" />}
-          {change}
+          {isPositive === true && <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.75} />}
+          {isPositive === false && <ArrowDownRight className="w-3.5 h-3.5" strokeWidth={1.75} />}
+          {isPositive === undefined && <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />}
+          <span>{change}</span>
         </span>
-        <span className="text-slate-400 font-medium truncate ml-2">
+        <span className="text-slate-500 truncate ml-2">
           {period}
         </span>
       </div>

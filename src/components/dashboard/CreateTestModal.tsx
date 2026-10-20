@@ -112,13 +112,13 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
     >
       {isSuccess ? (
         <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
-          <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-            <CheckCircle className="w-7 h-7" />
+          <div className="h-11 w-11 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center">
+            <CheckCircle className="w-6 h-6" strokeWidth={1.75} />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">
-            Mock Test Created Successfully!
+          <h3 className="text-base font-semibold text-slate-900">
+            Mock Test Created Successfully
           </h3>
-          <p className="text-sm text-slate-500 max-w-sm">
+          <p className="text-xs sm:text-sm text-slate-500 max-w-sm leading-relaxed">
             Added to your in-memory test list. Note: this session persists only in local memory until backend integration is added.
           </p>
         </div>
@@ -128,9 +128,9 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
           <div>
             <label
               htmlFor="test-title"
-              className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1"
+              className="block text-xs font-medium text-slate-700 mb-1.5"
             >
-              Test Title *
+              Test Title <span className="text-rose-500">*</span>
             </label>
             <input
               id="test-title"
@@ -142,7 +142,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
                 if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
               }}
               placeholder="e.g. AP Chemistry: Equilibrium & Kinetics Practice"
-              className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 ${
+              className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 ${
                 errors.title ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'
               }`}
             />
@@ -156,9 +156,9 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             <div>
               <label
                 htmlFor="test-subject"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1"
+                className="block text-xs font-medium text-slate-700 mb-1.5"
               >
-                Subject *
+                Subject <span className="text-rose-500">*</span>
               </label>
               <select
                 id="test-subject"
@@ -179,7 +179,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             <div>
               <label
                 htmlFor="test-status"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1"
+                className="block text-xs font-medium text-slate-700 mb-1.5"
               >
                 Initial Status
               </label>
@@ -201,9 +201,9 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             <div>
               <label
                 htmlFor="test-questions"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1"
+                className="block text-xs font-medium text-slate-700 mb-1.5"
               >
-                Question Count *
+                Question Count <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -217,7 +217,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
                   }
                   className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
-                <span className="absolute right-3 top-2.5 text-xs text-slate-400">
+                <span className="absolute right-3 top-2 text-xs text-slate-400">
                   questions
                 </span>
               </div>
@@ -229,9 +229,9 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             <div>
               <label
                 htmlFor="test-duration"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1"
+                className="block text-xs font-medium text-slate-700 mb-1.5"
               >
-                Duration (Minutes) *
+                Duration (Minutes) <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -245,7 +245,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
                   }
                   className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
-                <span className="absolute right-3 top-2.5 text-xs text-slate-400">
+                <span className="absolute right-3 top-2 text-xs text-slate-400">
                   minutes
                 </span>
               </div>
@@ -257,11 +257,11 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-            <Button variant="outline" type="button" onClick={handleClose}>
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <Button variant="outline" size="sm" type="button" onClick={handleClose}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" size="sm" type="submit">
               Save Test
             </Button>
           </div>
