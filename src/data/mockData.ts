@@ -152,11 +152,10 @@ export const navigationItems: NavItem[] = [
     isImplemented: true,
   },
   {
-    label: 'My Tests',
-    href: '/teacher/tests',
+    label: 'Question Builder',
+    href: '/teacher/builder',
     iconName: 'file-text',
-    badge: '24',
-    isImplemented: false,
+    isImplemented: true,
   },
   {
     label: 'Student Attempts',

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Clock,
@@ -28,6 +29,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
   onDeleteTest,
   onShowNotice,
 }) => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedSubject, setSelectedSubject] = useState<string>('All Subjects');
@@ -111,12 +113,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
   };
 
   const handleEditClick = (test: MockTest) => {
-    if (onShowNotice) {
-      onShowNotice(
-        `Edit Test: "${test.title}"`,
-        `Test editor for "${test.id}" is a demo placeholder. In full implementation, this opens the Question Builder and Section settings.`
-      );
-    }
+    router.push(`/teacher/builder?testId=${test.id}`);
   };
 
   const confirmDelete = () => {
@@ -528,9 +525,21 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
               </span>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-2.5 pt-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedTest(null)}>
                 Close Preview
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  const id = selectedTest.id;
+                  setSelectedTest(null);
+                  router.push(`/teacher/builder?testId=${id}`);
+                }}
+              >
+                Open in Question Builder
               </Button>
             </div>
           </div>

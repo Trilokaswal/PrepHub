@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { MockTest, TestStatus } from '@/types';
 import { subjectOptions } from '@/data/mockData';
-import { CheckCircle } from 'lucide-react';
+import { createDefaultQuestion, saveStoredTest } from '@/lib/testStore';
+import { CheckCircle, ArrowRight } from 'lucide-react';
 
 interface CreateTestModalProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
   onClose,
   onTestCreated,
 }) => {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState(subjectOptions[1] || 'Physics');
   const [questionCount, setQuestionCount] = useState<number>(30);
@@ -57,8 +60,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
     onClose();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = (goToBuilder: boolean) => {
     const newErrors: { [key: string]: string } = {};
 
     if (!title.trim()) {
@@ -76,30 +78,46 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
       return;
     }
 
+    const testId = `test-${Date.now().toString().slice(-4)}`;
+    const starterQuestion = createDefaultQuestion(testId, 1, 'single_choice');
+
     const newTest: MockTest = {
-      id: `test-${Date.now().toString().slice(-4)}`,
+      id: testId,
       title: title.trim(),
       subject,
-      questionCount,
+      questionCount: 1,
       durationMinutes,
       totalAttempts: 0,
+      totalMarks: starterQuestion.marks,
       status,
+      questions: [starterQuestion],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
+    saveStoredTest(newTest);
     onTestCreated(newTest);
-    setIsSuccess(true);
 
-    timerRef.current = setTimeout(() => {
-      setIsSuccess(false);
-      setTitle('');
-      setQuestionCount(30);
-      setDurationMinutes(60);
-      setStatus('draft');
-      setErrors({});
+    if (goToBuilder) {
       onClose();
-    }, 1200);
+      router.push(`/teacher/builder?testId=${newTest.id}`);
+    } else {
+      setIsSuccess(true);
+      timerRef.current = setTimeout(() => {
+        setIsSuccess(false);
+        setTitle('');
+        setQuestionCount(30);
+        setDurationMinutes(60);
+        setStatus('draft');
+        setErrors({});
+        onClose();
+      }, 1200);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSave(true);
   };
 
   return (
@@ -257,12 +275,27 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-            <Button variant="outline" size="sm" type="button" onClick={handleClose}>
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+            <Button variant="outline" size="sm" type="button" onClick={handleClose} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button variant="primary" size="sm" type="submit">
-              Save Test
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => handleSave(false)}
+              className="w-full sm:w-auto"
+            >
+              Save as Draft
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="w-full sm:w-auto"
+            >
+              Continue to Question Builder
             </Button>
           </div>
         </form>

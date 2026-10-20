@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileText,
   Calendar,
@@ -23,6 +23,12 @@ import {
 } from '@/data/mockData';
 import { MockTest } from '@/types';
 import { formatNumber } from '@/lib/formatters';
+import {
+  getStoredTests,
+  deleteStoredTest,
+  resetStoredTestsToDefault,
+  subscribeToTestStore,
+} from '@/lib/testStore';
 
 export default function TeacherDashboardPage() {
   const [tests, setTests] = useState<MockTest[]>(initialMockTests);
@@ -37,6 +43,15 @@ export default function TeacherDashboardPage() {
     message: '',
   });
 
+  // Client-side synchronization with local test store
+  useEffect(() => {
+    setTests(getStoredTests());
+    const unsubscribe = subscribeToTestStore(() => {
+      setTests(getStoredTests());
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Calculate live dynamic counts based on local test state
   const totalTestsCount = tests.length;
   const upcomingTestsCount = tests.filter((t) => t.status === 'scheduled').length;
@@ -44,15 +59,17 @@ export default function TeacherDashboardPage() {
   const pendingReviewCount = tests.filter((t) => t.status === 'pending_review').length;
 
   const handleTestCreated = (newTest: MockTest) => {
-    setTests((prev) => [newTest, ...prev]);
+    setTests((prev) => [newTest, ...prev.filter((t) => t.id !== newTest.id)]);
   };
 
   const handleDeleteTest = (id: string) => {
+    deleteStoredTest(id);
     setTests((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleResetSampleData = () => {
-    setTests(initialMockTests);
+    const reset = resetStoredTestsToDefault();
+    setTests(reset);
   };
 
   const handleExportClick = () => {
