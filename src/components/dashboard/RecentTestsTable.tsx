@@ -10,6 +10,10 @@ import {
   Trash2,
   AlertCircle,
   RefreshCw,
+  Share2,
+  Check,
+  ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import { MockTest, TestStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -17,6 +21,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { subjectOptions } from '@/data/mockData';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/formatters';
+import { saveStoredTest } from '@/lib/testStore';
 
 interface RecentTestsTableProps {
   tests: MockTest[];
@@ -38,6 +43,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
   // Test inspection modal
   const [selectedTest, setSelectedTest] = useState<MockTest | null>(null);
   const [testToDelete, setTestToDelete] = useState<MockTest | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Status mapping to Badge variants and labels
   const getStatusBadge = (status: TestStatus) => {
@@ -58,6 +64,18 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
         return (
           <Badge variant="warning" withDot>
             Pending Review
+          </Badge>
+        );
+      case 'ended':
+        return (
+          <Badge variant="danger" withDot>
+            Ended
+          </Badge>
+        );
+      case 'results_released':
+        return (
+          <Badge variant="indigo" withDot>
+            Results Released
           </Badge>
         );
       case 'draft':
@@ -179,6 +197,8 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
               <option value="published">Published</option>
               <option value="scheduled">Scheduled</option>
               <option value="pending_review">Pending Review</option>
+              <option value="ended">Ended</option>
+              <option value="results_released">Results Released</option>
               <option value="draft">Draft</option>
             </select>
           </div>
@@ -480,9 +500,12 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
               <span className="text-xs font-medium text-slate-500">
                 Current Status
               </span>
-              {getStatusBadge(selectedTest.status)}
+              <div className="flex items-center gap-2">
+                {getStatusBadge(selectedTest.status)}
+              </div>
             </div>
 
+            {/* Core Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
                 <span className="text-xs text-slate-400 block">Total Questions</span>
@@ -518,16 +541,148 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-800 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.75} />
-              <span>
-                <strong>Static Mock Preview:</strong> Student submission review and question editing will be linked when database APIs are integrated.
-              </span>
-            </div>
+            {/* Configured Exam Settings Breakdown */}
+            {selectedTest.settings && (
+              <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                    Exam Schedule & Policy
+                  </h4>
+                  <span className="text-[11px] text-slate-500">
+                    Cohort: {selectedTest.settings.sectionOrCourse || 'All Enrolled'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                    <span className="text-slate-400 block">Schedule Availability</span>
+                    <span className="font-medium text-slate-800">
+                      {selectedTest.settings.scheduleType === 'immediate'
+                        ? 'Available Immediately upon publish'
+                        : selectedTest.settings.startDate
+                        ? `Starts: ${formatDateTime(selectedTest.settings.startDate)}`
+                        : 'Scheduled Start'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                    <span className="text-slate-400 block">Submission Deadline</span>
+                    <span className="font-medium text-slate-800">
+                      {selectedTest.settings.hasDeadline && selectedTest.settings.deadlineDate
+                        ? formatDateTime(selectedTest.settings.deadlineDate)
+                        : 'No hard cutoff (duration-only)'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                    <span className="text-slate-400 block">Answer Key Visibility</span>
+                    <span className="font-medium text-slate-800">
+                      {selectedTest.settings.practiceMode
+                        ? 'Practice Mode (Instant Feedback)'
+                        : selectedTest.settings.answerReleaseTiming === 'never'
+                        ? 'Never Visible'
+                        : selectedTest.settings.answerReleaseTiming === 'scheduled'
+                        ? 'Scheduled Release Date'
+                        : selectedTest.settings.answerReleaseTiming === 'manual'
+                        ? 'Manual Instructor Release'
+                        : 'Immediately after exam closes'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                    <span className="text-slate-400 block">Results Release Scope</span>
+                    <span className="font-medium text-slate-800">
+                      {selectedTest.settings.resultsVisibilityScope === 'score_only'
+                        ? 'Total Score Only'
+                        : selectedTest.settings.resultsVisibilityScope === 'score_answers'
+                        ? 'Score + Correct Answers'
+                        : 'Full Scores, Answers & Explanations'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Shareable Link Box */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
+                    <span className="font-medium">Direct Candidate Link:</span>
+                    {selectedTest.settings.isPasswordProtected && (
+                      <span className="text-amber-700 font-medium inline-flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Passcode Protected
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={selectedTest.settings.shareableLink || `https://prephub.edu/exam/${selectedTest.id}`}
+                      className="flex-1 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 font-mono select-all focus:outline-none"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const link = selectedTest.settings?.shareableLink || `https://prephub.edu/exam/${selectedTest.id}`;
+                        navigator.clipboard?.writeText(link);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }}
+                      leftIcon={copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
+                    >
+                      {copiedLink ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Manual Results Release Callout */}
+            {selectedTest.status !== 'results_released' && selectedTest.status !== 'draft' && (
+              <div className="p-3 rounded-lg bg-indigo-50/70 border border-indigo-200/80 flex items-center justify-between gap-3 text-xs text-indigo-900">
+                <div>
+                  <p className="font-semibold text-indigo-950">
+                    Release Results to Students
+                  </p>
+                  <p className="text-indigo-700 mt-0.5">
+                    Make scores and answers immediately visible to all candidate portfolios.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="shrink-0 text-xs"
+                  onClick={() => {
+                    const updated: MockTest = {
+                      ...selectedTest,
+                      status: 'results_released',
+                    };
+                    saveStoredTest(updated);
+                    setSelectedTest(updated);
+                    if (onShowNotice) {
+                      onShowNotice(
+                        'Results Released',
+                        `Official results and scorecards have been published for "${selectedTest.title}". Students can now view their attempt analysis.`
+                      );
+                    }
+                  }}
+                >
+                  Release Results
+                </Button>
+              </div>
+            )}
+
+            {selectedTest.status === 'results_released' && (
+              <div className="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-2 text-xs text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Results Released:</strong> Candidate scores, answer choices, and performance analyses are active and visible.
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2.5 pt-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedTest(null)}>
-                Close Preview
+                Close
               </Button>
               <Button
                 variant="primary"

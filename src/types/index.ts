@@ -1,10 +1,52 @@
-export type TestStatus = 'published' | 'scheduled' | 'draft' | 'pending_review';
+export type TestStatus =
+  | 'published'
+  | 'scheduled'
+  | 'draft'
+  | 'pending_review'
+  | 'ended'
+  | 'results_released';
 
 export type QuestionType =
   | 'single_choice'
   | 'multiple_choice'
   | 'numerical'
   | 'subjective';
+
+export type ScheduleType = 'immediate' | 'scheduled';
+export type AnswerReleaseTiming = 'never' | 'immediate_after_close' | 'scheduled' | 'manual';
+export type ResultsReleaseTiming = 'immediate_after_close' | 'scheduled' | 'manual';
+export type ResultVisibilityScope = 'score_only' | 'score_answers' | 'score_answers_explanations';
+
+export interface ExamSettings {
+  // A. Schedule & Duration
+  scheduleType: ScheduleType;
+  startDate?: string;
+  durationMinutes: number;
+  hasDeadline: boolean;
+  deadlineDate?: string;
+
+  // B. Student Access & Security
+  sectionOrCourse?: string;
+  shareableLink?: string;
+  isPasswordProtected: boolean;
+  accessPassword?: string;
+  maxAttempts: number;
+  instructions?: string;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+
+  // C. Answer Visibility
+  practiceMode: boolean;
+  answerReleaseTiming: AnswerReleaseTiming;
+  scheduledAnswerReleaseDate?: string;
+  answersReleasedManually?: boolean;
+
+  // D. Results & Grading Policy
+  resultsReleaseTiming: ResultsReleaseTiming;
+  scheduledResultsDate?: string;
+  resultsVisibilityScope: ResultVisibilityScope;
+  resultsReleasedManually?: boolean;
+}
 
 export interface McqOption {
   id: string;
@@ -52,6 +94,7 @@ export interface MockTest {
   totalMarks?: number;
   instructions?: string;
   questions?: Question[];
+  settings?: ExamSettings;
   createdAt: string;
   updatedAt: string;
 }

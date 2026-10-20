@@ -14,21 +14,26 @@ import {
   Clock,
   Award,
   Layers,
+  Lock,
+  PauseCircle,
+  StopCircle,
 } from 'lucide-react';
-import { MockTest, Question, QuestionType } from '@/types';
+import { MockTest, Question, QuestionType, ExamSettings } from '@/types';
 import {
   getStoredTestById,
   getStoredTests,
   saveStoredTest,
   createDefaultQuestion,
+  getDefaultExamSettings,
 } from '@/lib/testStore';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { QuestionNavigator } from '@/components/builder/QuestionNavigator';
 import { QuestionEditor } from '@/components/builder/QuestionEditor';
 import { StudentPreview } from '@/components/builder/StudentPreview';
 import { TestSettingsModal } from '@/components/builder/TestSettingsModal';
-import { PublishValidationModal } from '@/components/builder/PublishValidationModal';
+import { ExamPublishModal } from '@/components/builder/ExamPublishModal';
 
 function QuestionBuilderContent() {
   const searchParams = useSearchParams();
@@ -40,6 +45,8 @@ function QuestionBuilderContent() {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Load test from storage or fallback
@@ -70,7 +77,7 @@ function QuestionBuilderContent() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3000);
+    }, 3500);
   };
 
   // Add Question
@@ -124,7 +131,6 @@ function QuestionBuilderContent() {
 
     const updatedList = [...questions];
     updatedList.splice(targetIdx + 1, 0, cloned);
-    // Re-index orders
     const reordered = updatedList.map((q, idx) => ({ ...q, order: idx + 1 }));
     setQuestions(reordered);
     setActiveQuestionId(newId);
@@ -192,22 +198,46 @@ function QuestionBuilderContent() {
     showToast('Draft saved successfully to local session');
   };
 
-  // Confirm Publish Action
-  const handleConfirmPublish = () => {
+  // Confirm Publish Action (from ExamPublishModal)
+  const handleConfirmPublish = (newSettings: ExamSettings, targetStatus: 'published' | 'scheduled') => {
     if (!test) return;
     const updatedTest: MockTest = {
       ...test,
-      status: 'published',
+      status: targetStatus,
+      durationMinutes: newSettings.durationMinutes,
+      scheduledDate: newSettings.scheduleType === 'scheduled' ? newSettings.startDate : undefined,
+      settings: newSettings,
       questions,
       questionCount: questions.length,
       totalMarks: questions.reduce((sum, q) => sum + (q.marks || 0), 0),
+      instructions: newSettings.instructions || test.instructions,
     };
     saveStoredTest(updatedTest);
     setTest(updatedTest);
-    showToast('Test published successfully! Now live for students.');
+    showToast(
+      targetStatus === 'scheduled'
+        ? 'Exam scheduled successfully and locked.'
+        : 'Exam is now live! Students can access and submit attempts.'
+    );
   };
 
-  // Settings Save
+  // Save Settings as Draft (from ExamPublishModal)
+  const handleSaveDraftSettings = (newSettings: ExamSettings) => {
+    if (!test) return;
+    const updatedTest: MockTest = {
+      ...test,
+      durationMinutes: newSettings.durationMinutes,
+      scheduledDate: newSettings.scheduleType === 'scheduled' ? newSettings.startDate : undefined,
+      settings: newSettings,
+      questions,
+      instructions: newSettings.instructions || test.instructions,
+    };
+    saveStoredTest(updatedTest);
+    setTest(updatedTest);
+    showToast('Exam settings saved to draft.');
+  };
+
+  // Safe Edit Settings Modal Save
   const handleSaveSettings = (fields: Partial<MockTest>) => {
     if (!test) return;
     const updatedTest: MockTest = {
@@ -217,7 +247,33 @@ function QuestionBuilderContent() {
     };
     saveStoredTest(updatedTest);
     setTest(updatedTest);
-    showToast('Test settings updated');
+    showToast('Test metadata updated');
+  };
+
+  // Re-open for Editing (Pause Exam)
+  const handlePauseExam = () => {
+    if (!test) return;
+    const updatedTest: MockTest = {
+      ...test,
+      status: 'draft',
+    };
+    saveStoredTest(updatedTest);
+    setTest(updatedTest);
+    setIsPauseModalOpen(false);
+    showToast('Exam moved to Draft. Content editing is now unlocked.');
+  };
+
+  // End Exam
+  const handleEndExam = () => {
+    if (!test) return;
+    const updatedTest: MockTest = {
+      ...test,
+      status: 'ended',
+    };
+    saveStoredTest(updatedTest);
+    setTest(updatedTest);
+    setIsCancelModalOpen(false);
+    showToast('Exam has been ended. No further student attempts will be accepted.');
   };
 
   if (!test) {
@@ -234,6 +290,24 @@ function QuestionBuilderContent() {
   const activeQuestion = questions.find((q) => q.id === activeQuestionId) || questions[0];
   const activeIndex = questions.findIndex((q) => q.id === activeQuestionId);
   const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+  const isLocked = test.status === 'published' || test.status === 'scheduled';
+
+  const getStatusBadge = () => {
+    switch (test.status) {
+      case 'published':
+        return <Badge variant="success" withDot>Live & Published</Badge>;
+      case 'scheduled':
+        return <Badge variant="info" withDot>Scheduled</Badge>;
+      case 'pending_review':
+        return <Badge variant="warning" withDot>Pending Review</Badge>;
+      case 'ended':
+        return <Badge variant="danger" withDot>Ended</Badge>;
+      case 'results_released':
+        return <Badge variant="indigo" withDot>Results Released</Badge>;
+      default:
+        return <Badge variant="neutral" withDot>Draft</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -249,18 +323,7 @@ function QuestionBuilderContent() {
               <span>Back to Dashboard</span>
             </Link>
             <span className="text-slate-300">•</span>
-            <Badge
-              variant={
-                test.status === 'published'
-                  ? 'success'
-                  : test.status === 'scheduled'
-                  ? 'info'
-                  : 'neutral'
-              }
-              withDot
-            >
-              {test.status}
-            </Badge>
+            {getStatusBadge()}
             <span className="text-xs font-medium text-slate-500 px-2 py-0.5 rounded bg-slate-100 border border-slate-200/60">
               {test.subject}
             </span>
@@ -322,17 +385,53 @@ function QuestionBuilderContent() {
             Save Draft
           </Button>
 
-          {/* Publish Button */}
+          {/* Configure & Publish Button */}
           <Button
             variant="primary"
             size="md"
             leftIcon={<Send className="w-4 h-4" strokeWidth={1.75} />}
             onClick={() => setIsPublishModalOpen(true)}
           >
-            Publish Test
+            {isLocked ? 'Configure Exam Settings' : 'Publish Test'}
           </Button>
         </div>
       </div>
+
+      {/* Live / Scheduled Integrity Lock Banner */}
+      {isLocked && (
+        <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+            <div>
+              <p className="font-semibold text-indigo-900">
+                Exam is currently {test.status === 'published' ? 'Live & Published' : 'Scheduled'}.
+              </p>
+              <p className="text-slate-600 mt-0.5">
+                Questions and answer keys are protected from silent edits while candidates can take the test.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<PauseCircle className="w-3.5 h-3.5" />}
+              className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+              onClick={() => setIsPauseModalOpen(true)}
+            >
+              Re-open for Editing (Pause)
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<StopCircle className="w-3.5 h-3.5" />}
+              onClick={() => setIsCancelModalOpen(true)}
+            >
+              End Exam
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Summary KPI Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -367,7 +466,7 @@ function QuestionBuilderContent() {
           <div>
             <span className="text-[11px] font-medium text-slate-500 block">Duration</span>
             <span className="text-base font-semibold text-slate-900 tabular-nums">
-              {test.durationMinutes} min
+              {test.settings?.durationMinutes || test.durationMinutes} min
             </span>
           </div>
         </div>
@@ -395,7 +494,7 @@ function QuestionBuilderContent() {
             onSelectQuestion={(id) => setActiveQuestionId(id)}
             onAddQuestion={handleAddQuestion}
             onMoveQuestion={handleMoveQuestion}
-            totalDurationMinutes={test.durationMinutes}
+            totalDurationMinutes={test.settings?.durationMinutes || test.durationMinutes}
           />
 
           {/* Center Column: Question Editor */}
@@ -433,7 +532,21 @@ function QuestionBuilderContent() {
         />
       )}
 
-      {/* Modals */}
+      {/* Examination Configuration & Publishing Modal */}
+      <ExamPublishModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        test={test}
+        questions={questions}
+        onConfirmPublish={handleConfirmPublish}
+        onSaveDraftSettings={handleSaveDraftSettings}
+        onJumpToQuestion={(id) => {
+          setActiveQuestionId(id);
+          setMode('edit');
+        }}
+      />
+
+      {/* Test Metadata Settings Modal */}
       <TestSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -441,16 +554,51 @@ function QuestionBuilderContent() {
         onSaveSettings={handleSaveSettings}
       />
 
-      <PublishValidationModal
-        isOpen={isPublishModalOpen}
-        onClose={() => setIsPublishModalOpen(false)}
-        questions={questions}
-        onConfirmPublish={handleConfirmPublish}
-        onJumpToQuestion={(id) => {
-          setActiveQuestionId(id);
-          setMode('edit');
-        }}
-      />
+      {/* Pause / Return to Draft Confirmation Modal */}
+      <Modal
+        isOpen={isPauseModalOpen}
+        onClose={() => setIsPauseModalOpen(false)}
+        title="Re-open Exam for Editing?"
+        description="This will pause student access and return the exam to Draft status."
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            While in Draft, new student submissions cannot be initiated. You can freely edit questions and adjust the schedule before republishing.
+          </p>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsPauseModalOpen(false)}>
+              Keep Exam Active
+            </Button>
+            <Button variant="primary" size="sm" onClick={handlePauseExam}>
+              Pause & Unlock for Editing
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* End / Cancel Exam Confirmation Modal */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title="End Examination?"
+        description="This will permanently close the exam to any new student submissions."
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Are you sure you want to end this examination? The status will transition to <strong>Ended</strong> and answer keys or results will be eligible for release according to your configuration.
+          </p>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsCancelModalOpen(false)}>
+              Keep Active
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleEndExam}>
+              Confirm & End Exam
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Toast Notification */}
       {toastMessage && (

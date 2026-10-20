@@ -1,8 +1,34 @@
-import { MockTest, Question, QuestionType } from '@/types';
+import { MockTest, Question, QuestionType, ExamSettings } from '@/types';
 import { initialMockTests } from '@/data/mockData';
 
 const STORAGE_KEY = 'prephub_mock_tests_v2';
 const EVENT_NAME = 'prephub_tests_updated';
+
+/**
+ * Creates default exam configuration and scheduling settings.
+ */
+export function getDefaultExamSettings(test: Partial<MockTest>): ExamSettings {
+  return {
+    scheduleType: test.scheduledDate ? 'scheduled' : 'immediate',
+    startDate: test.scheduledDate,
+    durationMinutes: test.durationMinutes || 60,
+    hasDeadline: !!test.scheduledDate,
+    deadlineDate: test.scheduledDate
+      ? new Date(new Date(test.scheduledDate).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : undefined,
+    sectionOrCourse: 'General Cohort (All Enrolled)',
+    shareableLink: `https://prephub.edu/exam/${test.id || 'test'}`,
+    isPasswordProtected: false,
+    maxAttempts: 1,
+    instructions: test.instructions || 'Read all questions carefully. Time limit begins as soon as you launch the assessment.',
+    shuffleQuestions: false,
+    shuffleOptions: false,
+    practiceMode: false,
+    answerReleaseTiming: 'immediate_after_close',
+    resultsReleaseTiming: 'immediate_after_close',
+    resultsVisibilityScope: 'score_answers_explanations',
+  };
+}
 
 /**
  * Creates a blank question with sensible defaults for the given type.
@@ -159,6 +185,7 @@ function seedDefaultQuestions(tests: MockTest[]): MockTest[] {
         totalMarks: questions.reduce((sum, q) => sum + q.marks, 0),
         questionCount: questions.length,
         questions,
+        settings: t.settings || getDefaultExamSettings(t),
       };
     }
 
@@ -177,6 +204,7 @@ function seedDefaultQuestions(tests: MockTest[]): MockTest[] {
         totalMarks: 4,
         questionCount: 1,
         questions,
+        settings: t.settings || getDefaultExamSettings(t),
       };
     }
 
@@ -187,6 +215,7 @@ function seedDefaultQuestions(tests: MockTest[]): MockTest[] {
       totalMarks: 4,
       questionCount: 1,
       questions: [defaultQ],
+      settings: t.settings || getDefaultExamSettings(t),
     };
   });
 }
