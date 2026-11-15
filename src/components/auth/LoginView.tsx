@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 import { authStore, DEMO_CREDENTIALS } from '@/lib/authStore';
 import { rateLimiter, sanitizeInput } from '@/lib/security/rateLimiter';
@@ -66,19 +65,6 @@ export const LoginView: React.FC = () => {
 
   // Check if current email input is valid format
   const isEmailValid = Boolean(email && email.includes('@') && email.includes('.'));
-
-  // Quick Demo Account Autofill
-  const handleFillDemo = useCallback((selectedRole: UserRole) => {
-    setRole(selectedRole);
-    if (selectedRole === 'teacher') {
-      setEmail(DEMO_CREDENTIALS.teacher.email);
-      setPassword(DEMO_CREDENTIALS.teacher.password);
-    } else {
-      setEmail(DEMO_CREDENTIALS.student.email);
-      setPassword(DEMO_CREDENTIALS.student.password);
-    }
-    setErrorMessage(null);
-  }, []);
 
   // Standard Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
@@ -232,13 +218,13 @@ export const LoginView: React.FC = () => {
           ref={rightPanelRef}
           className="w-full lg:w-1/2 h-full max-h-full overflow-y-auto overflow-x-hidden py-3 lg:py-6 px-1 sm:px-3 flex flex-col items-center justify-start [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.45)_transparent] hover:[scrollbar-color:rgba(148,163,184,0.75)_transparent]"
         >
-          <div className="w-full max-w-lg space-y-5 bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-9 border border-slate-200/80 shadow-xl shadow-slate-900/5 my-auto">
+          <div className="w-full max-w-lg space-y-6 sm:space-y-7 bg-white/95 backdrop-blur-md rounded-3xl p-7 sm:p-10 border border-slate-200/80 shadow-xl shadow-slate-900/5 my-auto">
             {/* Header: Welcome Back :) + Subtitle with Bell emoji */}
-            <div className="space-y-2">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <div className="space-y-2.5 pt-2 sm:pt-4 pb-1 sm:pb-2">
+              <h1 className="text-3xl sm:text-[40px] font-extrabold text-slate-900 tracking-tight leading-tight">
                 Welcome Back :)
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-500 leading-relaxed pt-1">
                 To keep connected with us please login with your personal information by email address
                 and password <span aria-hidden="true">🔔</span>
               </p>
@@ -274,30 +260,6 @@ export const LoginView: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Quick Demo Fill Pill Helper */}
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px]">
-              <span className="font-semibold text-slate-600 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#E14D45]" />
-                <span>Quick Demo:</span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo('student')}
-                  className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-semibold hover:border-[#E14D45] hover:text-[#E14D45] transition-colors cursor-pointer"
-                >
-                  Student (Alex)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo('teacher')}
-                  className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-semibold hover:border-slate-800 transition-colors cursor-pointer"
-                >
-                  Educator
-                </button>
-              </div>
-            </div>
 
             {/* Feedback Alerts */}
             {errorMessage && (

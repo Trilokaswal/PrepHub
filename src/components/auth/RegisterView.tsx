@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  GraduationCap,
-  BookOpen,
   User,
   Mail,
   Lock,
@@ -141,49 +139,15 @@ export const RegisterView: React.FC = () => {
 
       {/* Main Registration Card */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-900/5 p-6 sm:p-8 space-y-6">
+        <div className="w-full max-w-lg bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-900/5 p-7 sm:p-10 space-y-6 sm:space-y-7">
           {/* Header */}
-          <div className="space-y-1 text-center">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="space-y-2 text-center pt-2 sm:pt-4 pb-1 sm:pb-2">
+            <h1 className="text-3xl sm:text-[38px] font-extrabold text-slate-900 tracking-tight leading-tight">
               Create an account
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm sm:text-base text-slate-500 pt-1">
               Get started with PrepHub in seconds.
             </p>
-          </div>
-
-          {/* Simple Role Selector */}
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200/60">
-            <button
-              type="button"
-              onClick={() => {
-                setRole('student');
-                setErrorMessage(null);
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                role === 'student'
-                  ? 'bg-white text-[#4F46E5] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" strokeWidth={1.75} />
-              <span>Student Candidate</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRole('teacher');
-                setErrorMessage(null);
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                role === 'teacher'
-                  ? 'bg-white text-[#4F46E5] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" strokeWidth={1.75} />
-              <span>Faculty Educator</span>
-            </button>
           </div>
 
           {/* Feedback Alerts */}
@@ -321,7 +285,7 @@ export const RegisterView: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-[#E14D45] hover:bg-[#CC3F37] active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full py-3 px-4 bg-[#E14D45] hover:bg-[#CC3F37] active:scale-[0.99] text-white font-bold text-base rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -330,7 +294,7 @@ export const RegisterView: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span>Create {role === 'teacher' ? 'Educator' : 'Student'} Account</span>
+                  <span>Create {role === 'teacher' ? 'Educator Account' : 'Account'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
