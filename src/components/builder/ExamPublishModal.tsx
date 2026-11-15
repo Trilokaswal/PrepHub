@@ -765,7 +765,11 @@ export const ExamPublishModal: React.FC<ExamPublishModalProps> = ({
                 <div>
                   <p className="font-semibold text-emerald-950">All Validation Checks Passed</p>
                   <p className="text-emerald-800 mt-0.5">
-                    {questions.length} questions ({totalMarks} marks) verified. All answer keys and timing configurations are valid.
+                    {questions.length} questions ({totalMarks} marks) verified
+                    {test.targetQuestionCount && test.targetQuestionCount > questions.length
+                      ? ` (${test.targetQuestionCount - questions.length} remaining to reach target of ${test.targetQuestionCount})`
+                      : ''}
+                    . All answer keys and timing configurations are valid.
                   </p>
                 </div>
               </div>

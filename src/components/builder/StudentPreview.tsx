@@ -230,8 +230,13 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
         }
       } else if (q.type === 'numerical') {
         const numVal = parseFloat(userAns as string);
-        if (!isNaN(numVal) && q.expectedNumericAnswer !== undefined) {
-          const tol = q.numericTolerance || 0;
+        if (
+          !Number.isNaN(numVal) &&
+          q.expectedNumericAnswer !== undefined &&
+          q.expectedNumericAnswer !== null &&
+          Number.isFinite(q.expectedNumericAnswer)
+        ) {
+          const tol = Math.max(0, q.numericTolerance || 0);
           const min = q.expectedNumericAnswer - tol;
           const max = q.expectedNumericAnswer + tol;
           if (numVal >= min && numVal <= max) {

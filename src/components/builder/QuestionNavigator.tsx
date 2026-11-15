@@ -25,6 +25,7 @@ interface QuestionNavigatorProps {
   onAddQuestion: (type: QuestionType) => void;
   onMoveQuestion: (index: number, direction: 'up' | 'down') => void;
   totalDurationMinutes: number;
+  targetQuestionCount?: number;
 }
 
 export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
@@ -34,6 +35,7 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
   onAddQuestion,
   onMoveQuestion,
   totalDurationMinutes,
+  targetQuestionCount,
 }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -90,7 +92,14 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
     }
 
     if (q.type === 'numerical') {
-      return q.expectedNumericAnswer !== undefined && !isNaN(q.expectedNumericAnswer);
+      const ans = q.expectedNumericAnswer;
+      return (
+        ans !== undefined &&
+        ans !== null &&
+        typeof ans === 'number' &&
+        !Number.isNaN(ans) &&
+        Number.isFinite(ans)
+      );
     }
 
     return true; // subjective is valid if statement & marks > 0
@@ -107,7 +116,11 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
           <div className="flex items-center gap-2">
             <ListOrdered className="w-4 h-4 text-slate-500" strokeWidth={1.75} />
             <h2 className="text-sm font-semibold text-slate-900">
-              Questions ({questions.length})
+              Questions ({questions.length}
+              {targetQuestionCount && targetQuestionCount > questions.length
+                ? ` / ${targetQuestionCount}`
+                : ''}
+              )
             </h2>
           </div>
           <Button
@@ -200,28 +213,28 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
 
                     {/* Reorder Up/Down */}
                     <div
-                      className="flex flex-col ml-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                      className="flex flex-col ml-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100 transition-opacity"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         type="button"
                         disabled={index === 0}
                         onClick={() => onMoveQuestion(index, 'up')}
-                        className="p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent"
-                        title="Move Question Up"
+                        className="p-1 sm:p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-600"
+                        title={index === 0 ? 'Cannot move up (already first question)' : 'Move Question Up'}
                         aria-label={`Move Question ${index + 1} Up`}
                       >
-                        <ChevronUp className="w-3 h-3" />
+                        <ChevronUp className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                       </button>
                       <button
                         type="button"
                         disabled={index === questions.length - 1}
                         onClick={() => onMoveQuestion(index, 'down')}
-                        className="p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent"
-                        title="Move Question Down"
+                        className="p-1 sm:p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-600"
+                        title={index === questions.length - 1 ? 'Cannot move down (already last question)' : 'Move Question Down'}
                         aria-label={`Move Question ${index + 1} Down`}
                       >
-                        <ChevronDown className="w-3 h-3" />
+                        <ChevronDown className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                       </button>
                     </div>
                   </div>

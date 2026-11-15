@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { MockTest, TestStatus } from '@/types';
 import { subjectOptions } from '@/data/mockData';
-import { createDefaultQuestion, saveStoredTest } from '@/lib/testStore';
+import { createDefaultQuestion, saveStoredTest, generateUniqueId } from '@/lib/testStore';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 
 interface CreateTestModalProps {
@@ -51,14 +51,14 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
     }
   }, [isOpen]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     setIsSuccess(false);
     onClose();
-  };
+  }, [onClose]);
 
   const handleSave = (goToBuilder: boolean) => {
     const newErrors: { [key: string]: string } = {};
@@ -78,13 +78,14 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
       return;
     }
 
-    const testId = `test-${Date.now().toString().slice(-4)}`;
+    const testId = generateUniqueId('test');
     const starterQuestion = createDefaultQuestion(testId, 1, 'single_choice');
 
     const newTest: MockTest = {
       id: testId,
       title: title.trim(),
       subject,
+      targetQuestionCount: questionCount,
       questionCount: 1,
       durationMinutes,
       totalAttempts: 0,
@@ -95,7 +96,12 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    saveStoredTest(newTest);
+    const saveResult = saveStoredTest(newTest);
+    if (!saveResult.success) {
+      setErrors({ form: saveResult.error || 'Failed to save test to browser storage.' });
+      return;
+    }
+
     onTestCreated(newTest);
 
     if (goToBuilder) {
@@ -221,7 +227,7 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
                 htmlFor="test-questions"
                 className="block text-xs font-medium text-slate-700 mb-1.5"
               >
-                Question Count <span className="text-rose-500">*</span>
+                Target Question Count <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -236,9 +242,12 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
                   className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-400">
-                  questions
+                  target Qs
                 </span>
               </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Planned total questions (exam starts with 1 starter question in builder)
+              </p>
               {errors.questionCount && (
                 <p className="text-xs text-rose-600 mt-1">{errors.questionCount}</p>
               )}
@@ -274,6 +283,12 @@ export const CreateTestModal: React.FC<CreateTestModalProps> = ({
               )}
             </div>
           </div>
+
+          {errors.form && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 leading-relaxed">
+              {errors.form}
+            </div>
+          )}
 
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-2.5">
             <Button variant="outline" size="sm" type="button" onClick={handleClose} className="w-full sm:w-auto">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   FileText,
   Calendar,
@@ -10,17 +11,21 @@ import {
   AlertCircle,
   RotateCcw,
   CheckCircle2,
+  ArrowRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentTestsTable } from '@/components/dashboard/RecentTestsTable';
 import { CreateTestModal } from '@/components/dashboard/CreateTestModal';
+import { ExportModal } from '@/components/dashboard/ExportModal';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import {
   mockTeacherProfile,
   initialMockTests,
 } from '@/data/mockData';
-import { MockTest } from '@/types';
+import { MockTest, AuthUser } from '@/types';
+import { authStore } from '@/lib/authStore';
 import {
   getStoredTests,
   deleteStoredTest,
@@ -29,8 +34,10 @@ import {
 } from '@/lib/testStore';
 
 export default function TeacherDashboardPage() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [tests, setTests] = useState<MockTest[]>(initialMockTests);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [demoNotice, setDemoNotice] = useState<{
     isOpen: boolean;
     title: string;
@@ -41,13 +48,23 @@ export default function TeacherDashboardPage() {
     message: '',
   });
 
-  // Client-side synchronization with local test store
+  // Client-side synchronization with local test store and auth store
   useEffect(() => {
     setTests(getStoredTests());
-    const unsubscribe = subscribeToTestStore(() => {
+    setCurrentUser(authStore.getCurrentUser());
+
+    const unsubTest = subscribeToTestStore(() => {
       setTests(getStoredTests());
     });
-    return () => unsubscribe();
+
+    const unsubAuth = authStore.subscribe(() => {
+      setCurrentUser(authStore.getCurrentUser());
+    });
+
+    return () => {
+      unsubTest();
+      unsubAuth();
+    };
   }, []);
 
   // Calculate live dynamic counts based on local test state
@@ -55,6 +72,10 @@ export default function TeacherDashboardPage() {
   const liveTestsCount = tests.filter((t) => t.status === 'published').length;
   const scheduledTestsCount = tests.filter((t) => t.status === 'scheduled').length;
   const pendingReviewCount = tests.filter((t) => t.status === 'pending_review').length;
+
+  const teacherName = currentUser?.name || mockTeacherProfile.name;
+  const teacherDepartment = currentUser?.department || mockTeacherProfile.department;
+  const isStudentSession = currentUser?.role === 'student';
 
   const handleTestCreated = (newTest: MockTest) => {
     setTests((prev) => [newTest, ...prev.filter((t) => t.id !== newTest.id)]);
@@ -71,25 +92,56 @@ export default function TeacherDashboardPage() {
   };
 
   const handleExportClick = () => {
-    setDemoNotice({
-      isOpen: true,
-      title: 'Export Test Analytics (Demo)',
-      message:
-        'The export functionality generates CSV and PDF report summaries in production. In this local mock phase, exports are simulated.',
-    });
+    setIsExportModalOpen(true);
   };
+
+  // Deny access to students, protecting teacher data
+  if (isStudentSession) {
+    return (
+      <div className="max-w-lg mx-auto py-12 px-4 text-center space-y-6">
+        <div className="w-14 h-14 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+          <ShieldAlert className="w-7 h-7" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            Educator Access Restricted
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            You are currently signed in with a candidate account: <strong>{currentUser?.name}</strong>.
+            The Teacher Workspace and exam creation tools are reserved exclusively for verified faculty.
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/student"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#4F46E5] text-white font-semibold text-sm hover:bg-[#4338CA] transition-colors shadow-xs"
+          >
+            <span>Open Student Portal</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/teacher/login"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-2xs"
+          >
+            <span>Sign in as Educator</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="space-y-6">
+
         {/* Welcome Header & Primary Actions */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-              Welcome back, {mockTeacherProfile.name.split(' ')[0]}
+              Welcome back, {teacherName.split(' ')[0]}
             </h1>
             <p className="text-sm text-slate-500 max-w-2xl">
-              Manage your mock examinations, review student attempt metrics, and evaluate pending grading queues for {mockTeacherProfile.department}.
+              Manage your mock examinations, review student attempt metrics, and evaluate pending grading queues for {teacherDepartment}.
             </p>
           </div>
 
@@ -163,21 +215,13 @@ export default function TeacherDashboardPage() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100/50 self-start sm:self-auto shrink-0 font-medium"
-              onClick={() =>
-                setDemoNotice({
-                  isOpen: true,
-                  title: 'Grading Queue (Demo)',
-                  message:
-                    'The grading interface lets instructors score subjective short-answer and essay questions with custom rubrics. This will be integrated with the backend submission queue.',
-                })
-              }
+            <Link
+              href="/teacher/grading"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100/50 transition-colors shadow-2xs self-start sm:self-auto shrink-0"
             >
-              Open Grading Queue
-            </Button>
+              <span>Open Grading Queue</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         )}
 
@@ -221,6 +265,13 @@ export default function TeacherDashboardPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onTestCreated={handleTestCreated}
+      />
+
+      {/* Export Catalog Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        tests={tests}
       />
 
       {/* Demo Action Modal */}

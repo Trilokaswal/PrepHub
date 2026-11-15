@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Archive,
+  Download,
+  AlertTriangle,
 } from 'lucide-react';
 import { MockTest, TestStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -24,7 +27,8 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { subjectOptions } from '@/data/mockData';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/formatters';
-import { saveStoredTest } from '@/lib/testStore';
+import { saveStoredTest, deleteStoredTest } from '@/lib/testStore';
+import { ExportModal } from './ExportModal';
 
 interface RecentTestsTableProps {
   tests: MockTest[];
@@ -55,6 +59,12 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
   const [selectedTest, setSelectedTest] = useState<MockTest | null>(null);
   const [testToDelete, setTestToDelete] = useState<MockTest | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Bulk selection & actions state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [bulkActionFeedback, setBulkActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Status mapping to Badge variants and labels
   const getStatusBadge = (status: TestStatus) => {
@@ -209,6 +219,93 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
     }
   };
 
+  // Bulk selection & action handlers
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const pageIds = paginatedTests.map((t) => t.id);
+    const allSelectedOnPage = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    if (allSelectedOnPage) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleConfirmBulkDelete = () => {
+    const count = selectedIds.length;
+    selectedIds.forEach((id) => {
+      deleteStoredTest(id);
+      if (onDeleteTest) {
+        onDeleteTest(id);
+      }
+    });
+    setBulkActionFeedback({
+      type: 'success',
+      message: `Successfully deleted ${count} ${count === 1 ? 'examination' : 'examinations'}.`,
+    });
+    setSelectedIds([]);
+    setIsBulkDeleteModalOpen(false);
+    setTimeout(() => setBulkActionFeedback(null), 4000);
+  };
+
+  const handleBulkArchive = () => {
+    let count = 0;
+    tests.forEach((t) => {
+      if (selectedIds.includes(t.id)) {
+        saveStoredTest({
+          ...t,
+          status: 'ended',
+          updatedAt: new Date().toISOString(),
+        });
+        count++;
+      }
+    });
+    setBulkActionFeedback({
+      type: 'success',
+      message: `Archived ${count} ${count === 1 ? 'examination' : 'examinations'}.`,
+    });
+    setSelectedIds([]);
+    setTimeout(() => setBulkActionFeedback(null), 4000);
+  };
+
+  const handleBulkPublish = () => {
+    let publishedCount = 0;
+    let skippedCount = 0;
+    tests.forEach((t) => {
+      if (selectedIds.includes(t.id)) {
+        const qCount = t.questions?.length ?? 0;
+        if (qCount > 0 || t.questionCount > 0) {
+          saveStoredTest({
+            ...t,
+            status: 'published',
+            updatedAt: new Date().toISOString(),
+          });
+          publishedCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+    });
+    setBulkActionFeedback({
+      type: publishedCount > 0 ? 'success' : 'error',
+      message:
+        skippedCount > 0
+          ? `Published ${publishedCount} exams. (${skippedCount} skipped: requires at least 1 question)`
+          : `Successfully published ${publishedCount} ${publishedCount === 1 ? 'examination' : 'examinations'}.`,
+    });
+    setSelectedIds([]);
+    setTimeout(() => setBulkActionFeedback(null), 4500);
+  };
+
   return (
     <div className="space-y-4">
       {/* Controls: Search bar (prominent) + Filter & Sort Controls */}
@@ -328,13 +425,113 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
         )}
       </div>
 
+      {/* Bulk Action Feedback Message */}
+      {bulkActionFeedback && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`p-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between gap-2 shadow-xs ${
+            bulkActionFeedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              : 'bg-rose-50 text-rose-800 border border-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {bulkActionFeedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{bulkActionFeedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBulkActionFeedback(null)}
+            className="p-1 text-slate-400 hover:text-slate-600 rounded"
+            aria-label="Dismiss feedback"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Action Bar (when tests are selected) */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-indigo-50/90 border border-indigo-200 rounded-xl text-xs sm:text-sm shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-indigo-950 font-medium">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4F46E5] text-white text-xs font-bold">
+              {selectedIds.length}
+            </span>
+            <span>{selectedIds.length === 1 ? 'exam selected' : 'exams selected'}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Archive className="w-3.5 h-3.5 text-slate-600" />}
+              onClick={handleBulkArchive}
+              title="Archive selected exams"
+            >
+              Archive
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+              onClick={handleBulkPublish}
+              title="Publish selected exams"
+            >
+              Publish
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Download className="w-3.5 h-3.5 text-indigo-600" />}
+              onClick={() => setIsExportModalOpen(true)}
+              title="Export selected exams to CSV or JSON"
+            >
+              Export Selected
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              title="Delete selected exams"
+            >
+              Delete
+            </Button>
+            <button
+              type="button"
+              onClick={handleDeselectAll}
+              className="text-xs text-indigo-700 hover:text-indigo-900 font-medium underline px-2 py-1 ml-1"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop / Tablet Table View */}
       <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-medium text-slate-500">
-                <th scope="col" className="py-3 px-4 sm:px-6 w-2/5 min-w-[220px]">
+                <th scope="col" className="py-3 pl-4 pr-1 sm:pl-6 w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all tests on this page"
+                    checked={
+                      paginatedTests.length > 0 &&
+                      paginatedTests.every((t) => selectedIds.includes(t.id))
+                    }
+                    onChange={handleToggleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                  />
+                </th>
+                <th scope="col" className="py-3 px-4 sm:px-4 w-2/5 min-w-[220px]">
                   Test Details
                 </th>
                 <th scope="col" className="py-3 px-4 w-[12%]">
@@ -362,10 +559,23 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 paginatedTests.map((test) => (
                   <tr
                     key={test.id}
-                    className="hover:bg-slate-50/75 transition-colors group"
+                    className={`hover:bg-slate-50/75 transition-colors group ${
+                      selectedIds.includes(test.id) ? 'bg-indigo-50/30' : ''
+                    }`}
                   >
+                    {/* Checkbox Column */}
+                    <td className="py-3.5 pl-4 pr-1 sm:pl-6 w-10">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${test.title}`}
+                        checked={selectedIds.includes(test.id)}
+                        onChange={() => handleToggleSelectRow(test.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                      />
+                    </td>
+
                     {/* Test Title & ID (Clickable to Edit) */}
-                    <td className="py-3.5 px-4 sm:px-6">
+                    <td className="py-3.5 px-4">
                       <button
                         type="button"
                         onClick={() => handleEditClick(test)}
@@ -393,7 +603,14 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
 
                     {/* Question Count */}
                     <td className="py-3.5 px-4 text-center text-slate-700 tabular-nums">
-                      {test.questionCount}
+                      {test.targetQuestionCount && test.targetQuestionCount > test.questionCount ? (
+                        <span title={`${test.questionCount} created of ${test.targetQuestionCount} planned questions`}>
+                          <span className="font-semibold text-slate-900">{test.questionCount}</span>
+                          <span className="text-xs text-slate-400"> / {test.targetQuestionCount}</span>
+                        </span>
+                      ) : (
+                        test.questionCount
+                      )}
                     </td>
 
                     {/* Duration */}
@@ -600,18 +817,31 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
           paginatedTests.map((test) => (
             <div
               key={test.id}
-              className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3"
+              className={`bg-white rounded-xl border p-4 shadow-xs space-y-3 transition-colors ${
+                selectedIds.includes(test.id)
+                  ? 'border-indigo-300 bg-indigo-50/20 ring-1 ring-indigo-200'
+                  : 'border-slate-200/90'
+              }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => handleEditClick(test)}
-                    className="font-medium text-slate-900 text-sm leading-snug text-left hover:text-[#4F46E5] transition-colors"
-                  >
-                    {test.title}
-                  </button>
-                  <p className="text-xs text-slate-400 mt-0.5">ID: {test.id}</p>
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${test.title}`}
+                    checked={selectedIds.includes(test.id)}
+                    onChange={() => handleToggleSelectRow(test.id)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => handleEditClick(test)}
+                      className="font-medium text-slate-900 text-sm leading-snug text-left hover:text-[#4F46E5] transition-colors"
+                    >
+                      {test.title}
+                    </button>
+                    <p className="text-xs text-slate-400 mt-0.5">ID: {test.id}</p>
+                  </div>
                 </div>
                 {getStatusBadge(test.status)}
               </div>
@@ -624,7 +854,7 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
                 <div>
                   <span className="text-slate-400 block text-xs">Duration</span>
                   <span className="font-medium text-slate-800 tabular-nums">
-                    {test.durationMinutes} min ({test.questionCount} Qs)
+                    {test.durationMinutes} min ({test.questionCount}{test.targetQuestionCount && test.targetQuestionCount > test.questionCount ? `/${test.targetQuestionCount}` : ''} Qs)
                   </span>
                 </div>
                 <div>
@@ -739,9 +969,14 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
             {/* Core Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
-                <span className="text-xs text-slate-400 block">Total Questions</span>
+                <span className="text-xs text-slate-400 block">Questions</span>
                 <span className="text-base font-semibold text-slate-800 tabular-nums">
                   {selectedTest.questionCount}
+                  {selectedTest.targetQuestionCount && selectedTest.targetQuestionCount > selectedTest.questionCount && (
+                    <span className="text-xs font-normal text-slate-400 ml-1">
+                      (target: {selectedTest.targetQuestionCount})
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-slate-100 bg-white">
@@ -959,6 +1194,60 @@ export const RecentTestsTable: React.FC<RecentTestsTableProps> = ({
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        title="Delete Selected Examinations"
+        description="Permanently delete multiple tests and their associated configurations from local storage."
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Are you sure you want to delete{' '}
+            <strong className="text-slate-900">{selectedIds.length}</strong> selected{' '}
+            {selectedIds.length === 1 ? 'examination' : 'examinations'}? This operation cannot be undone.
+          </p>
+
+          <div className="max-h-40 overflow-y-auto rounded-lg bg-slate-50 p-3 border border-slate-200 text-xs text-slate-700 space-y-1.5">
+            {tests
+              .filter((t) => selectedIds.includes(t.id))
+              .map((t) => (
+                <div key={t.id} className="flex items-center justify-between">
+                  <span className="font-medium truncate mr-2">• {t.title}</span>
+                  <span className="text-slate-400 shrink-0">({t.subject})</span>
+                </div>
+              ))}
+          </div>
+
+          <div className="pt-2 flex justify-end gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={handleConfirmBulkDelete}
+            >
+              Delete {selectedIds.length} {selectedIds.length === 1 ? 'Exam' : 'Exams'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Export Modal (Supports Selected or All Tests) */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        tests={tests}
+        selectedTests={tests.filter((t) => selectedIds.includes(t.id))}
+      />
     </div>
   );
 };

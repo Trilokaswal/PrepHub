@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { navigationItems, mockTeacherProfile } from '@/data/mockData';
 import { Avatar } from '@/components/ui/Avatar';
+import { authStore } from '@/lib/authStore';
+import { PrepHubLogo } from '@/components/brand/PrepHubLogo';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -29,6 +31,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowNotice,
 }) => {
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState(() => authStore.getCurrentUser());
+
+  useEffect(() => {
+    setCurrentUser(authStore.getCurrentUser());
+    const unsubscribe = authStore.subscribe(() => {
+      setCurrentUser(authStore.getCurrentUser());
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const displayName = currentUser?.name || mockTeacherProfile.name;
+  const displayDepartment = currentUser?.department || currentUser?.gradeOrTarget || mockTeacherProfile.department;
+  const displayAvatar = currentUser?.avatarUrl || mockTeacherProfile.avatarUrl;
 
   const getNavIcon = (iconName: string) => {
     const props = { className: 'w-5 h-5 shrink-0', strokeWidth: 1.75 };
@@ -70,26 +85,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="flex h-full flex-col bg-white">
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-5 border-b border-slate-100">
-        <Link
-          href="/teacher"
-          className="flex items-center gap-2.5 font-medium text-slate-900 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-lg p-1"
-          onClick={() => setMobileOpen(false)}
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#4F46E5] text-white group-hover:bg-[#4338CA] transition-colors shadow-xs">
-            <GraduationCap className="h-5 w-5" strokeWidth={1.75} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base leading-tight tracking-tight font-semibold text-slate-900">
-              Prep<span className="text-[#4F46E5]">Hub</span>
-            </span>
-            <span className="text-xs font-medium text-slate-500">
-              Teacher Portal
-            </span>
-          </div>
-        </Link>
+        <div onClick={() => setMobileOpen(false)}>
+          <PrepHubLogo href="/teacher" tagline="TEACHER PORTAL" size="md" />
+        </div>
         <button
           onClick={() => setMobileOpen(false)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 cursor-pointer"
           aria-label="Close navigation sidebar"
         >
           <X className="w-5 h-5" strokeWidth={1.75} />
@@ -185,23 +186,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Teacher Profile Footer */}
+      {/* User Profile Footer */}
       <div className="p-3.5 border-t border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar
-            src={mockTeacherProfile.avatarUrl}
-            alt={mockTeacherProfile.name}
-            name={mockTeacherProfile.name}
+            src={displayAvatar}
+            alt={displayName}
+            name={displayName}
             size="md"
             showOnlineStatus
             isOnline
           />
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-900 truncate">
-              {mockTeacherProfile.name}
+              {displayName}
             </p>
             <p className="text-xs text-slate-500 truncate">
-              {mockTeacherProfile.department}
+              {displayDepartment}
             </p>
           </div>
         </div>

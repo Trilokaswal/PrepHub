@@ -5,17 +5,50 @@
 :root {
   --primary: #4F46E5;
   --primary-light: #EEF2FF;
+  --canvas: #F8FAFC;
+  --surface: #FFFFFF;
+  --border: #E2E8F0;
 }
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900;
+    @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-indigo-500/15 selection:text-indigo-900;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Accessible focus outline default */
+  /* Accessible focus outline default with crisp 2px ring */
   *:focus-visible {
-    @apply outline-none ring-2 ring-indigo-600 ring-offset-2 ring-offset-white;
+    @apply outline-none ring-2 ring-indigo-500 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer utilities {
+  /* Subtle Linear/Raycast dot grid pattern */
+  .bg-dot-grid {
+    background-image: radial-gradient(rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Snappy micro-transitions */
+  .transition-snappy {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Thin aesthetic custom scrollbars */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
   }
 }
 

@@ -115,7 +115,14 @@ export function validateTestForPublish(questions: Question[]): ValidationError[]
 
     // Numerical
     if (q.type === 'numerical') {
-      if (q.expectedNumericAnswer === undefined || isNaN(q.expectedNumericAnswer)) {
+      const ans = q.expectedNumericAnswer;
+      if (
+        ans === undefined ||
+        ans === null ||
+        typeof ans !== 'number' ||
+        Number.isNaN(ans) ||
+        !Number.isFinite(ans)
+      ) {
         errors.push({
           questionId: q.id,
           questionIndex: index,

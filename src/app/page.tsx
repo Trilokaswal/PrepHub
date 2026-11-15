@@ -1,102 +1,307 @@
+import React from 'react';
 import Link from 'next/link';
 import {
-  GraduationCap,
   ArrowRight,
-  LayoutDashboard,
+  Clock,
+  Sparkles,
+  Award,
+  Layers,
   CheckCircle2,
+  ChevronRight,
+  GraduationCap,
 } from 'lucide-react';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
+import { RedUnderline } from '@/components/brand/RedUnderline';
+import { HeroInteractiveCard } from '@/components/home/HeroInteractiveCard';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">
+    <div
+      className="min-h-screen bg-transparent flex flex-col font-sans text-slate-900 selection:bg-[#E14D45]/15 selection:text-[#E14D45]"
+      suppressHydrationWarning
+    >
       {/* Top Navbar */}
-      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-xs px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5 font-bold text-slate-900">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#4F46E5] text-white shadow-xs">
-              <GraduationCap className="h-5 w-5" strokeWidth={1.75} />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">
-              Prep<span className="text-[#4F46E5]">Hub</span>
-            </span>
-          </div>
+      <Navbar activeTab="home" />
 
-          <Link
-            href="/teacher"
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg bg-[#4F46E5] text-white hover:bg-[#4338CA] transition-colors shadow-xs"
-          >
-            <span>Teacher Dashboard</span>
-            <ArrowRight className="w-4 h-4" strokeWidth={1.75} />
-          </Link>
-        </div>
-      </header>
+      {/* Main Content */}
+      <main className="flex-1">
+        {/* ================================================================= */}
+        {/* 1. HERO SECTION (Screenshots Page 1)                               */}
+        {/* ================================================================= */}
+        <section className="pt-12 sm:pt-16 pb-16 sm:pb-24 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+              {/* Left Column: Heading, Subtext, CTAs, Stats */}
+              <div className="lg:col-span-7 space-y-8">
+                <h1 className="text-4xl sm:text-5xl lg:text-[62px] font-extrabold text-slate-900 tracking-tight leading-[1.08]">
+                  Practice with{' '}
+                  <span className="relative inline-block text-slate-900">
+                    purpose.
+                    <RedUnderline />
+                  </span>
+                </h1>
 
-      {/* Hero Section */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center space-y-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/70 text-xs font-medium text-[#4F46E5]">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-600" aria-hidden="true" />
-            <span>Frontend Foundation & Teacher Dashboard Phase</span>
-          </div>
+                <p className="text-sm sm:text-base text-slate-500 max-w-xl leading-relaxed">
+                  A distraction-free exam arena with countdown timers, clear question navigation,
+                  and instant scoring. Choose your course and semester, then turn revision into real,
+                  measurable readiness.
+                </p>
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-tight">
-            Next-Generation <span className="text-[#4F46E5]">Mock Test</span> Management for Educators
-          </h1>
+                {/* CTAs */}
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs sm:text-sm font-bold tracking-tight shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <span>Log in</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
 
-          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Welcome to the PrepHub prototype. Explore the responsive Teacher Dashboard with live in-memory test creation, search, status filters, and statistical overviews.
-          </p>
+                  <a
+                    href="#how-it-works"
+                    className="inline-flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors"
+                  >
+                    How it works
+                  </a>
+                </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/teacher"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm sm:text-base font-medium rounded-lg bg-[#4F46E5] text-white hover:bg-[#4338CA] active:bg-[#3730A3] transition-colors shadow-xs group"
-            >
-              <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.75} />
-              <span>Launch Teacher Dashboard</span>
-              <ArrowRight className="w-4 h-4 ml-1" strokeWidth={1.75} />
-            </Link>
-          </div>
+                {/* Stats Row */}
+                <div className="pt-8 border-t border-slate-100 grid grid-cols-3 gap-6 max-w-md">
+                  <div>
+                    <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 tracking-tight block">
+                      15
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                      Mock tests
+                    </span>
+                  </div>
 
-          {/* Key Feature Highlights */}
-          <div className="pt-8 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-            <div className="p-4 rounded-lg bg-white border border-slate-200/90 shadow-xs space-y-1.5">
-              <div className="flex items-center gap-2 text-slate-900 font-medium text-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={1.75} />
-                <span>Responsive Design</span>
+                  <div>
+                    <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 tracking-tight block">
+                      81
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                      Practice questions
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight block">
+                      Instant
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                      Scoring &amp; review
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Fixed sidebar for desktop, collapsible drawer for mobile, and adaptable table/card views.
-              </p>
-            </div>
 
-            <div className="p-4 rounded-lg bg-white border border-slate-200/90 shadow-xs space-y-1.5">
-              <div className="flex items-center gap-2 text-slate-900 font-medium text-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={1.75} />
-                <span>Local Filter & Search</span>
+              {/* Right Column: Interactive Hero Exam Card */}
+              <div className="lg:col-span-5 flex justify-center lg:justify-end">
+                <HeroInteractiveCard />
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Instant search and multi-status filtering working on static typed sample data.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-white border border-slate-200/90 shadow-xs space-y-1.5">
-              <div className="flex items-center gap-2 text-slate-900 font-medium text-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={1.75} />
-                <span>Honest Controls</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Clear notices distinguishing implemented features from planned backend integrations.
-              </p>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ================================================================= */}
+        {/* 2. SECTION 01 / WHAT YOU GET (Screenshots Page 2)                  */}
+        {/* ================================================================= */}
+        <section id="features" className="py-20 border-t border-slate-200/60 bg-white/75 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+            {/* Header */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+              <div className="lg:col-span-7 space-y-2">
+                <span className="text-[11px] font-mono font-bold tracking-widest text-[#E14D45] uppercase block">
+                  01 / WHAT YOU GET
+                </span>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                  Everything you need to{' '}
+                  <span className="relative inline-block">
+                    test, track, and improve.
+                    <RedUnderline />
+                  </span>
+                </h2>
+              </div>
+
+              <div className="lg:col-span-5 lg:pl-6">
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  A complete practice loop &mdash; from the first question to the final review &mdash;
+                  designed to close the gap between studying and performing.
+                </p>
+              </div>
+            </div>
+
+            {/* 4 Feature Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Card 1 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs hover:shadow-card-hover transition-all duration-200 space-y-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 text-[#E14D45] flex items-center justify-center">
+                  <Clock className="w-5 h-5 stroke-[2]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Realistic exam simulation
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Countdown timers, question navigation, and live status tracking &mdash; answered,
+                  unanswered, and flagged &mdash; just like the real thing.
+                </p>
+              </div>
+
+              {/* Card 2 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs hover:shadow-card-hover transition-all duration-200 space-y-4">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 stroke-[2]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Targeted practice
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Choose mock tests by subject and level, so you focus on the exact topics you need
+                  to master next.
+                </p>
+              </div>
+
+              {/* Card 3 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs hover:shadow-card-hover transition-all duration-200 space-y-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 text-[#E14D45] flex items-center justify-center">
+                  <Award className="w-5 h-5 stroke-[2]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Instant evaluation
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Get your score, performance breakdown, and a question-by-question review the
+                  moment you submit.
+                </p>
+              </div>
+
+              {/* Card 4 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs hover:shadow-card-hover transition-all duration-200 space-y-4">
+                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center">
+                  <Layers className="w-5 h-5 stroke-[2]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Focus-driven design
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  A minimal, clutter-free interface built for long study sessions without cognitive
+                  overload.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================= */}
+        {/* 3. SECTION 02 / HOW IT WORKS (Screenshots Page 3)                  */}
+        {/* ================================================================= */}
+        <section id="how-it-works" className="py-20 bg-white/80 backdrop-blur-md border-t border-slate-200/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+            {/* Header */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono font-bold tracking-widest text-[#E14D45] uppercase block">
+                02 / HOW IT WORKS
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                Three steps from{' '}
+                <span className="relative inline-block">
+                  revision to readiness.
+                  <RedUnderline />
+                </span>
+              </h2>
+            </div>
+
+            {/* 3 Steps */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Step 1 */}
+              <div className="space-y-4">
+                <div className="text-3xl font-black font-mono text-[#E14D45] tracking-tight">
+                  01
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Choose your course &amp; semester
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Pick your course, then your semester, so you only see the mock tests built for
+                  students like you &mdash; not everyone else&apos;s.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="space-y-4">
+                <div className="text-3xl font-black font-mono text-[#E14D45] tracking-tight">
+                  02
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Take it under exam conditions
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  A countdown timer keeps you honest. Answer, skip, or flag questions, and jump
+                  between them with the navigator.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="space-y-4">
+                <div className="text-3xl font-black font-mono text-[#E14D45] tracking-tight">
+                  03
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Review and improve
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Submit to get an instant score and a full question-by-question breakdown with
+                  explanations for every answer.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================= */}
+        {/* 4. CALL TO ACTION BANNER (Screenshots Page 4)                      */}
+        {/* ================================================================= */}
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-[#15233E] rounded-3xl p-8 sm:p-14 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="space-y-4 max-w-xl">
+                <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-widest text-[#E14D45] uppercase">
+                  <span className="w-1.5 h-1.5 bg-[#E14D45] rounded-xs" />
+                  <span>YOUR NEXT TEST IS WAITING</span>
+                </div>
+
+                <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                  Stop revising blindly.{' '}
+                  <span className="relative inline-block text-white">
+                    Start practising.
+                    <RedUnderline />
+                  </span>
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Pick your course and semester, run a timed mock, and see exactly where you stand
+                  &mdash; in minutes, not weeks.
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs sm:text-sm font-bold tracking-tight shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  <span>Log in to start</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="py-4 px-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
-        PrepHub Mock Test Platform • Next.js App Router • Tailwind CSS • TypeScript
-      </footer>
+      <Footer />
     </div>
   );
 }

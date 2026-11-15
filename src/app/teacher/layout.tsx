@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { TeacherLayoutWrapper } from '@/components/layout/TeacherLayoutWrapper';
 
 export const metadata = {
   title: 'Teacher Dashboard - PrepHub',
@@ -11,5 +11,5 @@ export default function TeacherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return <TeacherLayoutWrapper>{children}</TeacherLayoutWrapper>;
 }

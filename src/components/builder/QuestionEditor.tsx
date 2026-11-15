@@ -42,10 +42,54 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   const [showImageInput, setShowImageInput] = useState(!!question.imageUrl);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const statementTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /**
+   * Safely downscales and compresses user-provided image files using standard HTML canvas.
+   * Reduces 2MB-5MB images down to ~80-180KB DataURLs, preventing browser localStorage quota exhaustion.
+   */
+  const compressImageFile = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.82): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const outputType = file.type === 'image/png' && file.size < 400 * 1024 ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(outputType, quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => reject(new Error('Failed to decode image. File may be corrupted.'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Helper to handle JPEG/PNG file uploads
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = async (file: File) => {
     setImageError(null);
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
@@ -58,20 +102,19 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        updateField('imageUrl', reader.result);
-        if (!question.imageAlt) {
-          const cleanName = file.name.replace(/\.[^/.]+$/, '');
-          updateField('imageAlt', cleanName);
-        }
+    setIsProcessingImage(true);
+    try {
+      const compressedDataUrl = await compressImageFile(file);
+      updateField('imageUrl', compressedDataUrl);
+      if (!question.imageAlt) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, '');
+        updateField('imageAlt', cleanName);
       }
-    };
-    reader.onerror = () => {
-      setImageError('Failed to read image file. Please try again.');
-    };
-    reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      setImageError(err instanceof Error ? err.message : 'Failed to process image file. Please try again.');
+    } finally {
+      setIsProcessingImage(false);
+    }
   };
 
   // Helper to update specific fields
@@ -83,9 +126,31 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     });
   };
 
-  // Insert symbol at current cursor position or append to statement
+  // Insert symbol at current cursor position with selected-text replacement
   const handleInsertSymbol = (symbol: string) => {
-    updateField('statement', (question.statement || '') + symbol);
+    if (statementPreview) {
+      setStatementPreview(false);
+    }
+
+    const textarea = statementTextareaRef.current;
+    const currentText = question.statement || '';
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? currentText.length;
+      const end = textarea.selectionEnd ?? start;
+      const updatedText = currentText.substring(0, start) + symbol + currentText.substring(end);
+      updateField('statement', updatedText);
+
+      const nextCursor = start + symbol.length;
+      requestAnimationFrame(() => {
+        if (statementTextareaRef.current) {
+          statementTextareaRef.current.focus();
+          statementTextareaRef.current.setSelectionRange(nextCursor, nextCursor);
+        }
+      });
+    } else {
+      updateField('statement', currentText + symbol);
+    }
   };
 
   // Change Question Type (preserving statement and marks)
@@ -350,6 +415,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             </div>
           ) : (
             <textarea
+              ref={statementTextareaRef}
               id={`statement-${question.id}`}
               rows={4}
               value={question.statement}
@@ -400,10 +466,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                       type="button"
                       variant="outline"
                       size="sm"
+                      isLoading={isProcessingImage}
                       leftIcon={<Upload className="w-3.5 h-3.5" strokeWidth={1.75} />}
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      Upload JPEG or PNG File
+                      {isProcessingImage ? 'Optimizing & Attaching...' : 'Upload JPEG or PNG File'}
                     </Button>
                   </div>
                   {imageError && (
@@ -672,9 +739,15 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     type="number"
                     step="any"
                     value={question.expectedNumericAnswer ?? ''}
-                    onChange={(e) =>
-                      updateField('expectedNumericAnswer', parseFloat(e.target.value))
-                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (!raw.trim()) {
+                        updateField('expectedNumericAnswer', undefined);
+                      } else {
+                        const parsed = parseFloat(raw);
+                        updateField('expectedNumericAnswer', Number.isNaN(parsed) ? undefined : parsed);
+                      }
+                    }}
                     placeholder="e.g. 25"
                     className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
@@ -694,9 +767,15 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     min="0"
                     step="any"
                     value={question.numericTolerance ?? 0}
-                    onChange={(e) =>
-                      updateField('numericTolerance', Math.max(0, parseFloat(e.target.value) || 0))
-                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (!raw.trim()) {
+                        updateField('numericTolerance', 0);
+                      } else {
+                        const parsed = parseFloat(raw);
+                        updateField('numericTolerance', Number.isNaN(parsed) ? 0 : Math.max(0, parsed));
+                      }
+                    }}
                     placeholder="0"
                     className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
@@ -721,7 +800,9 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
               </div>
 
-              {question.expectedNumericAnswer !== undefined && !isNaN(question.expectedNumericAnswer) && (
+              {question.expectedNumericAnswer !== undefined &&
+                question.expectedNumericAnswer !== null &&
+                Number.isFinite(question.expectedNumericAnswer) && (
                 <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs text-emerald-800">
                   Accepts student answers between{' '}
                   <strong className="font-semibold tabular-nums">

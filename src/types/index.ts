@@ -6,6 +6,10 @@ export type TestStatus =
   | 'ended'
   | 'results_released';
 
+export type TestCategory = 'topic' | 'subject' | 'full';
+export type EngineeringYear = '1st Year' | '2nd Year' | '3rd Year' | '4th Year';
+export type DifficultyLevel = 'Beginner' | 'Intermediate' | 'Advanced';
+
 export type QuestionType =
   | 'single_choice'
   | 'multiple_choice'
@@ -85,7 +89,13 @@ export interface MockTest {
   id: string;
   title: string;
   subject: string;
+  testCategory?: TestCategory;
+  targetYear?: EngineeringYear;
+  topicName?: string;
+  subjectsIncluded?: string[];
+  difficulty?: DifficultyLevel;
   questionCount: number;
+  targetQuestionCount?: number;
   durationMinutes: number;
   totalAttempts: number;
   averageScore?: number;
@@ -93,6 +103,7 @@ export interface MockTest {
   scheduledDate?: string;
   totalMarks?: number;
   instructions?: string;
+  instructor?: string;
   questions?: Question[];
   settings?: ExamSettings;
   createdAt: string;
@@ -128,3 +139,86 @@ export interface NavItem {
   badge?: string;
   isImplemented?: boolean;
 }
+
+export interface TeacherNotification {
+  id: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  isRead: boolean;
+  type: 'submission' | 'grading' | 'system' | 'reminder';
+  actionLink?: string;
+}
+
+export interface SubjectiveAnswerSubmission {
+  questionId: string;
+  questionOrder: number;
+  questionStatement: string;
+  maxMarks: number;
+  rubricGuidelines?: string;
+  studentAnswerText: string;
+  awardedMarks?: number;
+  teacherFeedback?: string;
+  isEvaluated: boolean;
+}
+
+export interface StudentAttempt {
+  id: string;
+  testId: string;
+  testTitle: string;
+  subject: string;
+  testCategory?: TestCategory;
+  targetYear?: EngineeringYear;
+  studentName: string;
+  studentRoll: string;
+  studentEmail: string;
+  submittedAt: string;
+  score: number;
+  totalMarks: number;
+  percentage: number;
+  status: 'graded' | 'pending_evaluation' | 'in_progress';
+  subjectiveAnswers?: SubjectiveAnswerSubmission[];
+}
+
+export interface TeacherSettings {
+  institutionName: string;
+  department: string;
+  academicTerm: string;
+  defaultDurationMinutes: number;
+  defaultQuestionMarks: number;
+  defaultPassingPercentage: number;
+  defaultNegativeMarking: boolean;
+  defaultNegativeMarksPenalty: number;
+  defaultShuffleQuestions: boolean;
+  defaultShuffleOptions: boolean;
+  autoPublishResults: boolean;
+  subjects: string[];
+}
+
+export type UserRole = 'teacher' | 'student';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department?: string;
+  gradeOrTarget?: string;
+  avatarUrl?: string;
+  createdAt: string;
+  // Student specific academic details
+  phone?: string;
+  universityRoll?: string;
+  classRoll?: string;
+  section?: string;
+  branch?: string;
+  course?: string;
+  semester?: string | number;
+  isGuest?: boolean;
+}
+
+export interface AuthSession {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+}
+

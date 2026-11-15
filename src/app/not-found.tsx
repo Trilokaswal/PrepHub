@@ -23,11 +23,11 @@ export default function NotFound() {
         </div>
         <div className="pt-2 flex justify-center">
           <Link
-            href="/teacher"
+            href="/student"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[#4F46E5] text-white hover:bg-[#4338CA] transition-colors shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-            <span>Return to Teacher Dashboard</span>
+            <span>Return to Student Portal</span>
           </Link>
         </div>
       </div>

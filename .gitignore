@@ -29,6 +29,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# temporary reports & status exports
+*.pdf
+teacher_dashboard_status.html
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

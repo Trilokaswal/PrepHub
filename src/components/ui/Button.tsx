@@ -24,27 +24,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    // Base styles: accessible focus, alignment, font, motion transitions
+    // Base styles: accessible focus, alignment, font, tactile motion transitions
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-600 motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed select-none';
+      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.99] cursor-pointer';
 
     const sizeStyles = {
       sm: 'text-xs px-2.5 py-1.5 gap-1.5 h-8',
-      md: 'text-sm px-3.5 py-2 gap-2 h-9',
+      md: 'text-xs sm:text-sm px-3.5 py-2 gap-2 h-9',
       lg: 'text-sm sm:text-base px-4.5 py-2.5 gap-2 h-10',
     };
 
     const variantStyles = {
       primary:
-        'bg-[#4F46E5] text-white hover:bg-[#4338CA] active:bg-[#3730A3] shadow-xs',
+        'bg-[#4F46E5] text-white hover:bg-[#4338CA] active:bg-[#3730A3] border border-indigo-600/90 shadow-2xs',
       secondary:
-        'bg-[#EEF2FF] text-[#4F46E5] hover:bg-indigo-100 active:bg-indigo-200/80 border border-indigo-200/60',
+        'bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/70 active:bg-indigo-200/60 border border-indigo-200/70',
       outline:
-        'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100 shadow-xs',
+        'bg-white text-slate-800 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 shadow-2xs',
       ghost:
-        'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200',
+        'bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 active:bg-slate-200/70',
       danger:
-        'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-xs',
+        'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 border border-rose-700 shadow-2xs',
     };
 
     return (

@@ -7,7 +7,7 @@ PrepHub is a clean, modern mock examination and assessment management platform f
 
 ---
 
-## 🎨 Design System
+## Design System
 
 - **Primary Brand Color**: Indigo `#4F46E5` (Hover: `#4338CA`)
 - **Light Indigo Accent**: `#EEF2FF`
@@ -21,7 +21,7 @@ PrepHub is a clean, modern mock examination and assessment management platform f
 
 ---
 
-## 🚀 Getting Started (Beginner-Friendly Guide)
+## Getting Started (Beginner-Friendly Guide)
 
 ### Prerequisites
 
@@ -75,7 +75,7 @@ Open your browser and navigate to:
 
 ---
 
-## 📂 Project Architecture
+## Project Architecture
 
 ```
 PrepHub/
@@ -115,7 +115,7 @@ PrepHub/
 
 ---
 
-## 🧪 What to Test in the Browser
+## What to Test in the Browser
 
 When testing the application in your browser:
 
@@ -143,15 +143,15 @@ When testing the application in your browser:
    - Observe the "Total Tests" stat card increment automatically.
 
 6. **Test Details & Delete**:
-   - Click the eye icon (👁️) on any test row to open the full test details modal.
-   - Click the trash icon (🗑️) to delete a test for the current session.
+   - Click the eye icon on any test row to open the full test details modal.
+   - Click the trash icon to delete a test for the current session.
    - Click the reset button ("Reset to default sample tests") if you ever want to restore the initial test catalog.
 
 7. **Mobile Responsiveness**:
    - Open browser developer tools (`F12` or `Ctrl+Shift+I`) and toggle device toolbar (`Ctrl+Shift+M`).
    - Test on Mobile (e.g. iPhone / Pixel) and Tablet:
      - The left sidebar hides automatically.
-     - Tap the hamburger icon (☰) in the header to reveal the slide-out navigation drawer.
+     - Tap the hamburger icon in the header to reveal the slide-out navigation drawer.
      - The desktop data table switches to readable mobile cards.
 
 8. **Honest Controls**:
@@ -160,7 +160,7 @@ When testing the application in your browser:
 
 ---
 
-## 🔮 Scope & Constraints
+## Scope & Constraints
 
 - **Local Mock Only**: All test data resides in local React memory for demonstration. Refreshing the browser resets the data to `initialMockTests`.
 - **No Backend / Database Yet**: Supabase, PostgreSQL, and authentication are deliberately excluded at this stage as per project constraints.

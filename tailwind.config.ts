@@ -11,6 +11,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", ...defaultTheme.fontFamily.sans],
+        mono: ["var(--font-mono)", ...defaultTheme.fontFamily.mono],
       },
       colors: {
         primary: {
@@ -22,9 +23,28 @@ const config: Config = {
           DEFAULT: "#4F46E5",
           light: "#EEF2FF",
         },
+        prepred: {
+          DEFAULT: "#E14D45",
+          hover: "#CC3F37",
+          light: "#FDF2F2",
+          border: "#F87171",
+        },
+        prepnavy: {
+          DEFAULT: "#15233E",
+          light: "#1C2D4F",
+          dark: "#111A2E",
+          card: "#182744",
+        },
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+        xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        card: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
+        'card-hover': '0 6px 12px -2px rgba(0, 0, 0, 0.06), 0 3px 6px -3px rgba(0, 0, 0, 0.04)',
+        modal: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+      },
+      transitionTimingFunction: {
+        snappy: 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
     },
   },

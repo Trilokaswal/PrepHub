@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">
+  <!-- Rounded Deep Navy Badge Container -->
+  <rect width="36" height="36" rx="9" fill="#15233E" />
+  
+  <!-- Subtle Inset Highlight -->
+  <rect x="0.5" y="0.5" width="35" height="35" rx="8.5" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+
+  <!-- Left Foundation Pillar: Academic Rigor ('P' and 'H') -->
+  <rect x="7" y="6.5" width="4.5" height="23" rx="2.25" fill="#FFFFFF" />
+
+  <!-- Upper Knowledge Arch / Turned Page: The Head of 'P' -->
+  <path
+    d="M11.5 8.75 H21 C24.866 8.75 28 11.884 28 15.75 C28 19.616 24.866 22.75 21 22.75 H11.5"
+    stroke="#FFFFFF"
+    stroke-width="4.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Right Base Column: Completing the 'H' (Hub) Structure -->
+  <rect x="23.5" y="17.5" width="4.5" height="12" rx="2.25" fill="#FFFFFF" />
+
+  <!-- The Central Hub Focal Node: 4-Pointed Insight Compass in Signature Coral Red -->
+  <path
+    d="M18 12.25 C18 14.25 19.5 15.75 21.5 15.75 C19.5 15.75 18 17.25 18 19.25 C18 17.25 16.5 15.75 14.5 15.75 C16.5 15.75 18 14.25 18 12.25 Z"
+    fill="#E14D45"
+  />
+
+  <!-- Center Core -->
+  <circle cx="18" cy="15.75" r="1.15" fill="#FFFFFF" opacity="0.9" />
+</svg>
