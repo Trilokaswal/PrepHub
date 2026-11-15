@@ -321,7 +321,7 @@ export const authStore = {
     }
   },
 
-  async loginWithOAuth(provider: 'google' | 'apple' | 'azure'): Promise<AuthResult> {
+  async loginWithOAuth(provider: 'google' | 'apple' | 'azure', redirectTo = '/courses'): Promise<AuthResult> {
     if (!isSupabaseConfigured()) {
       return {
         success: false,
@@ -331,10 +331,13 @@ export const authStore = {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/courses` : undefined,
+          redirectTo: callbackUrl,
         },
       });
 
@@ -342,9 +345,88 @@ export const authStore = {
         return { success: false, error: error.message };
       }
 
+      if (data?.url && typeof window !== 'undefined') {
+        window.location.href = data.url;
+      }
+
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || 'OAuth sign-in failed.' };
+    }
+  },
+
+  async syncSupabaseSession(): Promise<AuthUser | null> {
+    if (!isBrowser() || !isSupabaseConfigured()) return null;
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return null;
+      }
+
+      // Fetch user profile from public.profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const userRole: UserRole =
+        (profile?.role as UserRole) ||
+        (user.user_metadata?.role as UserRole) ||
+        'student';
+
+      const authUser: AuthUser = {
+        id: user.id,
+        name:
+          profile?.name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split('@')[0] ||
+          'User',
+        email: user.email || '',
+        phone: profile?.phone || user.phone,
+        role: userRole,
+        universityRoll:
+          profile?.university_roll || user.user_metadata?.university_roll,
+        classRoll: profile?.class_roll || user.user_metadata?.class_roll,
+        section: profile?.section || user.user_metadata?.section,
+        branch: profile?.branch || user.user_metadata?.branch,
+        course: profile?.course || user.user_metadata?.course,
+        department: profile?.department || user.user_metadata?.department,
+        gradeOrTarget:
+          profile?.course && profile?.branch
+            ? `${profile.course} • ${profile.branch}`
+            : undefined,
+        avatarUrl:
+          profile?.avatar_url ||
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        createdAt: user.created_at,
+      };
+
+      const session: AuthSession = {
+        user: authUser,
+        isAuthenticated: true,
+      };
+
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        syncCookies(session);
+        window.dispatchEvent(new Event(AUTH_EVENT));
+      } catch (err) {
+        console.warn('Failed to cache Supabase session:', err);
+      }
+
+      return authUser;
+    } catch (err) {
+      console.warn('Failed to sync Supabase session:', err);
+      return null;
     }
   },
 
@@ -905,3 +987,30 @@ export const authStore = {
     };
   },
 };
+
+// Automatic client-side listener for Supabase Auth state changes (OAuth, session refresh)
+if (isBrowser() && isSupabaseConfigured()) {
+  try {
+    const supabase = createClient();
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (
+        session?.user &&
+        (event === 'SIGNED_IN' ||
+          event === 'USER_UPDATED' ||
+          event === 'INITIAL_SESSION')
+      ) {
+        await authStore.syncSupabaseSession();
+      } else if (event === 'SIGNED_OUT') {
+        const unauthSession: AuthSession = { user: null, isAuthenticated: false };
+        try {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(unauthSession));
+          syncCookies(unauthSession);
+          window.dispatchEvent(new Event(AUTH_EVENT));
+        } catch {}
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to initialize Supabase auth state listener:', err);
+  }
+}
+

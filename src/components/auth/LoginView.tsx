@@ -55,8 +55,14 @@ export const LoginView: React.FC = () => {
     const unsubscribe = authStore.subscribe(() => {
       setActiveUser(authStore.getCurrentUser());
     });
+
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'oauth_failed') {
+      setErrorMessage('Social authentication was canceled or could not be completed. Please try again.');
+    }
+
     return () => unsubscribe();
-  }, []);
+  }, [searchParams]);
 
   // Check if current email input is valid format
   const isEmailValid = Boolean(email && email.includes('@') && email.includes('.'));
@@ -125,9 +131,19 @@ export const LoginView: React.FC = () => {
 
     if (authStore.isSupabaseActive()) {
       const oauthProvider = provider === 'Google' ? 'google' : provider === 'Microsoft' ? 'azure' : 'apple';
-      const result = await authStore.loginWithOAuth(oauthProvider);
+      const result = await authStore.loginWithOAuth(oauthProvider, redirectTarget);
       if (!result.success) {
-        setErrorMessage(result.error || `Failed to authenticate with ${provider}.`);
+        if (
+          result.error?.toLowerCase().includes('not enabled') ||
+          result.error?.toLowerCase().includes('disabled') ||
+          result.error?.toLowerCase().includes('unsupported')
+        ) {
+          setErrorMessage(
+            `${provider} Sign-In is not enabled in your Supabase dashboard yet. Please enable ${provider} under Authentication -> Sign In / Providers.`
+          );
+        } else {
+          setErrorMessage(result.error || `Failed to authenticate with ${provider}.`);
+        }
         setSocialLoading(null);
       }
       return;
