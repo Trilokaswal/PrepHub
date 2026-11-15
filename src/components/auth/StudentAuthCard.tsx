@@ -304,18 +304,6 @@ export const StudentAuthCard: React.FC<StudentAuthCardProps> = ({
       {/* =================================================================== */}
       {activeTab === 'signin' && (
         <div className="space-y-4">
-          {/* Quick Demo Fill */}
-          <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between gap-2">
-            <span className="text-xs text-slate-600 font-medium">Demo candidate:</span>
-            <button
-              type="button"
-              onClick={handleFillDemoStudent}
-              className="px-2.5 py-1.5 bg-white hover:bg-indigo-50/70 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-            >
-              Fill Alex Rivera
-            </button>
-          </div>
-
           <form onSubmit={handleSignIn} className="space-y-3.5 text-left">
             {/* Email or Phone */}
             <div className="space-y-1">
@@ -416,7 +404,7 @@ export const StudentAuthCard: React.FC<StudentAuthCardProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Alex Rivera"
+                placeholder="e.g. Full Name"
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50/50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:bg-white transition-all"

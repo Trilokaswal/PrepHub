@@ -37,7 +37,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { authStore, DEMO_CREDENTIALS } from '@/lib/authStore';
-import { getStoredAttempts, subscribeToAttempts } from '@/lib/attemptsStore';
+import { getStoredAttempts, subscribeToAttempts, syncAttemptsFromSupabase } from '@/lib/attemptsStore';
 import { savedQuestionsStore, SavedQuestionItem } from '@/lib/savedQuestionsStore';
 import { AuthUser, StudentAttempt, UserRole } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
@@ -100,18 +100,29 @@ export const UserProfileView: React.FC = () => {
     setUser(currentUser);
     setEditName(currentUser.name || '');
     setEditPhone(currentUser.phone || '');
-    setEditRoll(currentUser.universityRoll || '2026-CS-042');
+    setEditRoll(currentUser.universityRoll || '');
     setEditCourse(currentUser.course || 'B.Tech');
     setEditBranch(currentUser.branch || 'Computer Science & Engineering');
     setEditSemester(currentUser.semester || 1);
-    setEditSection(currentUser.section || 'A');
+    setEditSection(currentUser.section || '');
 
     setAttempts(getStoredAttempts());
     setSavedQuestions(savedQuestionsStore.getQuestions());
 
+    if (currentUser.id) {
+      void syncAttemptsFromSupabase(currentUser.id).then((synced) => {
+        if (synced) setAttempts(synced);
+      });
+    }
+
     const unsubAuth = authStore.subscribe(() => {
       const u = authStore.getCurrentUser();
       setUser(u);
+      if (u?.id) {
+        void syncAttemptsFromSupabase(u.id).then((synced) => {
+          if (synced) setAttempts(synced);
+        });
+      }
     });
 
     const unsubAttempts = subscribeToAttempts(() => {
@@ -129,42 +140,140 @@ export const UserProfileView: React.FC = () => {
     };
   }, [router]);
 
-  // Derived KPI Statistics
+  // Derived KPI Statistics strictly filtered to this authenticated user
   const userAttempts = useMemo(() => {
     if (!user) return [];
     if (user.role === 'teacher') return attempts;
-    // For students, filter by student email/roll or show personal attempts
-    return attempts.filter(
-      (a) =>
-        a.studentEmail.toLowerCase() === user.email.toLowerCase() ||
-        a.studentRoll.toLowerCase() === (user.universityRoll || '').toLowerCase() ||
-        a.studentName.toLowerCase() === user.name.toLowerCase()
-    );
+    const userEmail = (user.email || '').toLowerCase().trim();
+    const userId = user.id;
+    const userRoll = (user.universityRoll || '').toLowerCase().trim();
+
+    return attempts.filter((a) => {
+      const attEmail = (a.studentEmail || '').toLowerCase().trim();
+      const attUserId = (a as any).userId;
+      const attRoll = (a.studentRoll || '').toLowerCase().trim();
+
+      const matchesEmail = Boolean(userEmail && attEmail && attEmail === userEmail);
+      const matchesId = Boolean(userId && attUserId && attUserId === userId);
+      const matchesRoll = Boolean(userRoll && attRoll && attRoll === userRoll);
+
+      return matchesEmail || matchesId || matchesRoll;
+    });
   }, [attempts, user]);
 
   const stats = useMemo(() => {
     const totalTaken = userAttempts.length;
     if (totalTaken === 0) {
       return {
-        totalTests: 6, // Seeded base stats if fresh user
-        avgScore: 78.4,
-        accuracy: 82.5,
+        totalTests: 0,
+        avgScore: 0,
+        accuracy: 0,
         savedCount: savedQuestions.length,
+        testsThisWeek: 0,
       };
     }
     const sumPercentage = userAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0);
     const avgScore = parseFloat((sumPercentage / totalTaken).toFixed(1));
+    const passedCount = userAttempts.filter((a) => (a.percentage || 0) >= 50).length;
+    const accuracy = parseFloat(((passedCount / totalTaken) * 100).toFixed(1));
+
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const testsThisWeek = userAttempts.filter(
+      (a) => a.submittedAt && new Date(a.submittedAt).getTime() >= oneWeekAgo
+    ).length;
+
     return {
       totalTests: totalTaken,
       avgScore,
-      accuracy: Math.min(98, Math.max(60, parseFloat((avgScore * 1.05).toFixed(1)))),
+      accuracy,
       savedCount: savedQuestions.length,
+      testsThisWeek,
     };
   }, [userAttempts, savedQuestions]);
 
+  // Real Curriculum Progress Calculated Per Subject
+  const curriculumProgress = useMemo(() => {
+    const subjects = [
+      { name: 'Engineering Mathematics I', code: 'MATH-101', keywords: ['math', 'calculus', 'algebra'] },
+      { name: 'Programming in C', code: 'CS-101', keywords: ['c', 'programming', 'code', 'data structure'] },
+      { name: 'Engineering Physics', code: 'PHY-101', keywords: ['physics', 'mechanic', 'thermodynamic'] },
+      { name: 'Basic Electrical & Electronics', code: 'EE-101', keywords: ['electrical', 'electronic', 'circuit'] },
+      { name: 'Environmental Science & Ethics', code: 'ENV-101', keywords: ['environment', 'ecology', 'ethics'] },
+    ];
+
+    return subjects.map((subj) => {
+      const matchingAttempts = userAttempts.filter((a) => {
+        const subName = (a.subject || '').toLowerCase();
+        const testTitle = (a.testTitle || '').toLowerCase();
+        return (
+          subName.includes(subj.name.toLowerCase()) ||
+          subj.keywords.some((k) => subName.includes(k) || testTitle.includes(k))
+        );
+      });
+
+      const testsDone = matchingAttempts.length;
+      const totalTests = 2;
+      const progress =
+        testsDone > 0
+          ? Math.min(
+              100,
+              Math.round(matchingAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / testsDone)
+            )
+          : 0;
+
+      return {
+        ...subj,
+        testsDone,
+        totalTests,
+        progress,
+      };
+    });
+  }, [userAttempts]);
+
+  // Real Exam Readiness Score & Forecast Infographic
+  const readinessMetrics = useMemo(() => {
+    if (userAttempts.length === 0) {
+      return {
+        score: 0,
+        summary: 'No mock tests completed yet. Start your first timed assessment to generate your personalized exam readiness score and performance forecast.',
+        pace: '—',
+        syllabusCovered: '0% complete',
+        predictedGrade: 'Not Evaluated',
+      };
+    }
+
+    const avgScore = userAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / userAttempts.length;
+    const distinctSubjects = new Set(userAttempts.map((a) => (a.subject || '').toLowerCase().trim())).size;
+    const syllabusPercent = Math.min(100, Math.round((distinctSubjects / 5) * 100));
+
+    // Weighted Readiness: 70% average score + 30% coverage
+    const calculatedScore = Math.min(100, Math.round(avgScore * 0.7 + syllabusPercent * 0.3));
+
+    let grade = 'Needs Revision';
+    if (calculatedScore >= 85) grade = 'A+ (Distinction)';
+    else if (calculatedScore >= 75) grade = 'A (Excellent)';
+    else if (calculatedScore >= 65) grade = 'B+ (Good)';
+    else if (calculatedScore >= 50) grade = 'B (Average)';
+
+    let summary = `Solid progress across ${distinctSubjects} subject(s). Keep practicing to reach top-tier marks in Semester ${editSemester || 1}.`;
+    if (calculatedScore >= 80) {
+      summary = `High retention rate! You are on track for top-tier marks in Semester ${editSemester || 1} examinations.`;
+    } else if (calculatedScore < 50) {
+      summary = `Early stage. Review weaker concepts and attempt more mock tests to boost your predicted score.`;
+    }
+
+    return {
+      score: calculatedScore,
+      summary,
+      pace: '1.2 min / question',
+      syllabusCovered: `${syllabusPercent}% complete`,
+      predictedGrade: grade,
+    };
+  }, [userAttempts, editSemester]);
+
   // Filtered History
   const filteredAttempts = useMemo(() => {
-    const list = userAttempts.length > 0 ? userAttempts : attempts.slice(0, 5);
+    const list = userAttempts;
     if (historyFilter === 'passed') {
       return list.filter((a) => a.percentage >= 50);
     }
@@ -172,7 +281,7 @@ export const UserProfileView: React.FC = () => {
       return list.filter((a) => a.percentage < 50);
     }
     return list;
-  }, [userAttempts, attempts, historyFilter]);
+  }, [userAttempts, historyFilter]);
 
   // Filtered Saved Questions
   const filteredSavedQuestions = useMemo(() => {
@@ -319,12 +428,14 @@ export const UserProfileView: React.FC = () => {
                   </span>
 
                   <span className="font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60">
-                    Roll: <strong className="text-slate-800">{user.universityRoll || editRoll}</strong>
+                    Roll: <strong className="text-slate-800">{user.universityRoll || editRoll || 'Not Assigned'}</strong>
                   </span>
 
-                  <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200/60">
-                    Sec: <strong className="text-slate-800">{editSection}</strong>
-                  </span>
+                  {(user.section || editSection) ? (
+                    <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200/60">
+                      Sec: <strong className="text-slate-800">{user.section || editSection}</strong>
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -342,12 +453,12 @@ export const UserProfileView: React.FC = () => {
                 </Link>
               ) : (
                 <Link
-                  href="/courses/btech/cse/semester-1"
+                  href="/courses"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs font-bold tracking-tight shadow-xs transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4" />
                   <span>Resume Syllabus</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               )}
             </div>
@@ -364,9 +475,13 @@ export const UserProfileView: React.FC = () => {
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
                   {stats.totalTests}
                 </span>
-                <span className="text-xs text-emerald-600 font-semibold flex items-center">
-                  <TrendingUp className="w-3 h-3 mr-0.5" /> +2 this week
-                </span>
+                {stats.testsThisWeek > 0 ? (
+                  <span className="text-xs text-emerald-600 font-semibold flex items-center">
+                    <TrendingUp className="w-3 h-3 mr-0.5" /> +{stats.testsThisWeek} this week
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400 font-medium">completed</span>
+                )}
               </div>
             </div>
 
@@ -392,7 +507,9 @@ export const UserProfileView: React.FC = () => {
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
                   {stats.accuracy}%
                 </span>
-                <span className="text-xs text-emerald-600 font-semibold">Ready</span>
+                <span className={`text-xs font-semibold ${stats.totalTests > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {stats.totalTests > 0 ? (stats.accuracy >= 75 ? 'Ready' : 'In Progress') : 'Unranked'}
+                </span>
               </div>
             </div>
 
@@ -502,13 +619,7 @@ export const UserProfileView: React.FC = () => {
 
                 {/* Subject Progress Bars */}
                 <div className="space-y-5">
-                  {[
-                    { name: 'Engineering Mathematics I', code: 'MATH-101', progress: 80, testsDone: 2, totalTests: 2 },
-                    { name: 'Programming in C', code: 'CS-101', progress: 65, testsDone: 1, totalTests: 2 },
-                    { name: 'Engineering Physics', code: 'PHY-101', progress: 50, testsDone: 1, totalTests: 2 },
-                    { name: 'Basic Electrical & Electronics', code: 'EE-101', progress: 30, testsDone: 1, totalTests: 2 },
-                    { name: 'Environmental Science & Ethics', code: 'ENV-101', progress: 0, testsDone: 0, totalTests: 2 },
-                  ].map((subj) => (
+                  {curriculumProgress.map((subj) => (
                     <div key={subj.code} className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
@@ -549,45 +660,66 @@ export const UserProfileView: React.FC = () => {
                 </div>
 
                 <div className="divide-y divide-slate-100 space-y-4">
-                  {userAttempts.slice(0, 4).map((att) => (
-                    <div key={att.id} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
-                          <Award className="w-4 h-4 text-[#E14D45]" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900 tracking-tight">{att.testTitle}</h4>
-                          <p className="text-xs text-slate-400">
-                            {att.subject} &bull; Submitted on {new Date(att.submittedAt).toLocaleDateString()}
-                          </p>
-                        </div>
+                  {userAttempts.length === 0 ? (
+                    <div className="py-8 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mx-auto">
+                        <Award className="w-6 h-6 text-slate-400" />
                       </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
-                            att.percentage >= 80
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : att.percentage >= 50
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
+                      <p className="text-sm font-bold text-slate-800">No mock tests attempted yet</p>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Your completed mock tests, scores, and question-by-question review logs will appear here once you finish an assessment.
+                      </p>
+                      <div className="pt-2">
+                        <Link
+                          href="/courses"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#E14D45] text-white text-xs font-bold hover:bg-[#CC3F37] transition-all shadow-xs"
                         >
-                          {att.percentage}%
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReviewAttempt(att);
-                            setIsReviewModalOpen(true);
-                          }}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer"
-                        >
-                          Review
-                        </button>
+                          <span>Browse Mock Tests</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    userAttempts.slice(0, 4).map((att) => (
+                      <div key={att.id} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
+                            <Award className="w-4 h-4 text-[#E14D45]" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900 tracking-tight">{att.testTitle}</h4>
+                            <p className="text-xs text-slate-400">
+                              {att.subject} &bull; Submitted on {new Date(att.submittedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                              att.percentage >= 80
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : att.percentage >= 50
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {att.percentage}%
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReviewAttempt(att);
+                              setIsReviewModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer"
+                          >
+                            Review
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -605,26 +737,28 @@ export const UserProfileView: React.FC = () => {
 
                 <div className="text-center py-2 space-y-2">
                   <div className="inline-flex items-baseline gap-1">
-                    <span className="text-5xl font-extrabold font-mono tracking-tight text-white">88</span>
+                    <span className="text-5xl font-extrabold font-mono tracking-tight text-white">
+                      {readinessMetrics.score}
+                    </span>
                     <span className="text-lg font-mono text-cyan-300">/100</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    High retention rate. You are on track for top-tier marks in Semester {enrolledSemester} examinations.
+                    {readinessMetrics.summary}
                   </p>
                 </div>
 
                 <div className="pt-2 border-t border-slate-800 space-y-2 text-xs text-slate-300">
                   <div className="flex justify-between">
                     <span>Speed / Pace:</span>
-                    <span className="font-mono text-cyan-400 font-bold">1.2 min / question</span>
+                    <span className="font-mono text-cyan-400 font-bold">{readinessMetrics.pace}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Syllabus Covered:</span>
-                    <span className="font-mono text-cyan-400 font-bold">72% complete</span>
+                    <span className="font-mono text-cyan-400 font-bold">{readinessMetrics.syllabusCovered}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Predicted Grade:</span>
-                    <span className="font-mono text-emerald-400 font-bold">A+ (Distinction)</span>
+                    <span className="font-mono text-emerald-400 font-bold">{readinessMetrics.predictedGrade}</span>
                   </div>
                 </div>
 

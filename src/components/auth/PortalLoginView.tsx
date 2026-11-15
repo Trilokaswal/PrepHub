@@ -167,7 +167,7 @@ export const PortalLoginView: React.FC<PortalLoginViewProps> = ({ portalRole }) 
               <span>
                 {isTeacher
                   ? 'Fill Demo Teacher (Dr. Sarah Jenkins)'
-                  : 'Fill Demo Student (Alex Rivera)'}
+                  : 'Fill Demo Student'}
               </span>
             </button>
           </div>

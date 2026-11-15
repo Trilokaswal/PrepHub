@@ -178,6 +178,7 @@ export interface StudentAttempt {
   percentage: number;
   status: 'graded' | 'pending_evaluation' | 'in_progress';
   subjectiveAnswers?: SubjectiveAnswerSubmission[];
+  userId?: string;
 }
 
 export interface TeacherSettings {

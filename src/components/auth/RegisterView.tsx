@@ -183,7 +183,7 @@ export const RegisterView: React.FC = () => {
                   id="reg-name"
                   type="text"
                   required
-                  placeholder={role === 'teacher' ? 'Dr. Sarah Jenkins' : 'Alex Rivera'}
+                  placeholder={role === 'teacher' ? 'e.g. Dr. Sarah Jenkins' : 'e.g. Full Name'}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:bg-white transition-all"

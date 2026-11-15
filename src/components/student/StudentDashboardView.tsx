@@ -23,9 +23,9 @@ import {
   Layers,
   GraduationCap,
 } from 'lucide-react';
-import { authStore, DEMO_STUDENT } from '@/lib/authStore';
+import { authStore } from '@/lib/authStore';
 import { getStoredTests, subscribeToTestStore } from '@/lib/testStore';
-import { getStoredAttempts, subscribeToAttempts } from '@/lib/attemptsStore';
+import { getStoredAttempts, subscribeToAttempts, syncAttemptsFromSupabase } from '@/lib/attemptsStore';
 import { MockTest, StudentAttempt, AuthUser, TestCategory, EngineeringYear } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
@@ -42,7 +42,14 @@ export const StudentDashboardView: React.FC = () => {
     setIsMounted(true);
     setTests(getStoredTests());
     setAttempts(getStoredAttempts());
-    setCurrentUser(authStore.getCurrentUser());
+    const user = authStore.getCurrentUser();
+    setCurrentUser(user);
+
+    if (user?.id) {
+      void syncAttemptsFromSupabase(user.id).then((synced) => {
+        if (synced) setAttempts(synced);
+      });
+    }
 
     const unsubTests = subscribeToTestStore(() => {
       setTests(getStoredTests());
@@ -51,7 +58,13 @@ export const StudentDashboardView: React.FC = () => {
       setAttempts(getStoredAttempts());
     });
     const unsubAuth = authStore.subscribe(() => {
-      setCurrentUser(authStore.getCurrentUser());
+      const u = authStore.getCurrentUser();
+      setCurrentUser(u);
+      if (u?.id) {
+        void syncAttemptsFromSupabase(u.id).then((synced) => {
+          if (synced) setAttempts(synced);
+        });
+      }
     });
 
     return () => {
@@ -61,20 +74,19 @@ export const StudentDashboardView: React.FC = () => {
     };
   }, []);
 
-  const studentName = currentUser?.name || DEMO_STUDENT.name;
-  const studentEmail = currentUser?.email?.toLowerCase() || DEMO_STUDENT.email.toLowerCase();
+  const studentName = currentUser?.name || 'Student';
+  const studentEmail = (currentUser?.email || '').toLowerCase().trim();
 
   // Show all developer-seeded mock tests
   const catalogTests = tests.length > 0 ? tests : getStoredTests();
 
-  // Filter attempts belonging to this student (or demo attempts if matches name/email)
+  // Filter attempts belonging strictly to this authenticated student
   const studentAttempts = attempts.filter((att) => {
-    if (!currentUser) return true;
+    if (!currentUser) return false;
     return (
-      att.studentEmail.toLowerCase() === studentEmail ||
-      att.studentName.toLowerCase() === studentName.toLowerCase() ||
-      (currentUser.universityRoll && att.studentRoll === currentUser.universityRoll) ||
-      att.studentName === 'Alex Rivera' // Show demo attempt for demonstration
+      (studentEmail && att.studentEmail && att.studentEmail.toLowerCase().trim() === studentEmail) ||
+      (currentUser.id && (att as any).userId === currentUser.id) ||
+      (currentUser.universityRoll && att.studentRoll && att.studentRoll === currentUser.universityRoll)
     );
   });
 

@@ -78,7 +78,7 @@ export default function PerformanceAnalyticsPage() {
   }, [filteredAttempts, filteredTests]);
 
   const passRate = useMemo(() => {
-    if (filteredAttempts.length === 0) return 78.4; // Sample benchmark
+    if (filteredAttempts.length === 0) return 0;
     const passed = filteredAttempts.filter((a) => a.percentage >= 60).length;
     return parseFloat(((passed / filteredAttempts.length) * 100).toFixed(1));
   }, [filteredAttempts]);
@@ -99,21 +99,16 @@ export default function PerformanceAnalyticsPage() {
         else if (a.percentage >= 40) bands.pass++;
         else bands.remediation++;
       });
-    } else {
-      bands.distinction = 35;
-      bands.proficient = 45;
-      bands.pass = 15;
-      bands.remediation = 5;
     }
 
     const total = Object.values(bands).reduce((sum, v) => sum + v, 0);
     return {
       bands,
       percentages: {
-        remediation: Math.round((bands.remediation / total) * 100),
-        pass: Math.round((bands.pass / total) * 100),
-        proficient: Math.round((bands.proficient / total) * 100),
-        distinction: Math.round((bands.distinction / total) * 100),
+        remediation: total > 0 ? Math.round((bands.remediation / total) * 100) : 0,
+        pass: total > 0 ? Math.round((bands.pass / total) * 100) : 0,
+        proficient: total > 0 ? Math.round((bands.proficient / total) * 100) : 0,
+        distinction: total > 0 ? Math.round((bands.distinction / total) * 100) : 0,
       },
     };
   }, [filteredAttempts]);
