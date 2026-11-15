@@ -38,23 +38,74 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- 4. AUTOMATIC PROFILE PROVISIONING TRIGGER (On auth.users sign-up)
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    user_name TEXT;
+    user_role_val public.user_role_type;
 BEGIN
-    INSERT INTO public.profiles (id, name, email, role, avatar_url)
+    user_name := COALESCE(
+        NEW.raw_user_meta_data->>'name',
+        split_part(COALESCE(NEW.email, 'student@prephub.edu'), '@', 1)
+    );
+
+    IF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', 'student')) = 'teacher' THEN
+        user_role_val := 'teacher'::public.user_role_type;
+    ELSE
+        user_role_val := 'student'::public.user_role_type;
+    END IF;
+
+    INSERT INTO public.profiles (
+        id,
+        name,
+        email,
+        role,
+        avatar_url,
+        university_roll,
+        class_roll,
+        section,
+        branch,
+        course,
+        department
+    )
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
-        NEW.email,
-        COALESCE((NEW.raw_user_meta_data->>'role')::user_role_type, 'student'),
-        COALESCE(NEW.raw_user_meta_data->>'avatar_url', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80')
+        user_name,
+        COALESCE(NEW.email, ''),
+        user_role_val,
+        COALESCE(
+            NEW.raw_user_meta_data->>'avatar_url',
+            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+        ),
+        NEW.raw_user_meta_data->>'university_roll',
+        NEW.raw_user_meta_data->>'class_roll',
+        NEW.raw_user_meta_data->>'section',
+        NEW.raw_user_meta_data->>'branch',
+        NEW.raw_user_meta_data->>'course',
+        NEW.raw_user_meta_data->>'department'
     )
     ON CONFLICT (id) DO UPDATE
-    SET name = EXCLUDED.name,
-        email = EXCLUDED.email;
+    SET 
+        name = EXCLUDED.name,
+        email = EXCLUDED.email,
+        updated_at = NOW();
+
     RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'handle_new_user error: %', SQLERRM;
+        RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

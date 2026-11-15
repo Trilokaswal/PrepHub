@@ -261,22 +261,26 @@ export const authStore = {
         };
       }
 
-      // Upsert profile in public.profiles table
-      await supabase.from('profiles').upsert({
-        id: authData.user.id,
-        name: data.name.trim(),
-        email: data.email.trim(),
-        role: data.role,
-        university_roll: data.universityRoll,
-        class_roll: data.classRoll,
-        section: data.section,
-        branch: data.branch,
-        course: data.course,
-        department: data.department,
-        avatar_url: data.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      // Upsert profile in public.profiles table (fallback in addition to handle_new_user trigger)
+      try {
+        await supabase.from('profiles').upsert({
+          id: authData.user.id,
+          name: data.name.trim(),
+          email: data.email.trim(),
+          role: data.role,
+          university_roll: data.universityRoll,
+          class_roll: data.classRoll,
+          section: data.section,
+          branch: data.branch,
+          course: data.course,
+          department: data.department,
+          avatar_url: data.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn('Profile upsert fallback skipped (trigger already handled it):', err);
+      }
 
       const authUser: AuthUser = {
         id: authData.user.id,
