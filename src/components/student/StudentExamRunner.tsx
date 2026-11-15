@@ -101,9 +101,22 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
   // Scorecard state
   const [scorecard, setScorecard] = useState<ScorecardData | null>(null);
 
+  // Security & Anti-Cheat State
+  const fullQuestionsRef = useRef<Question[]>([]);
+  const [tabSwitchCount, setTabSwitchCount] = useState<number>(0);
+  const [isWarningModalOpen, setIsWarningModalOpen] = useState<boolean>(false);
+  const [warningMessage, setWarningMessage] = useState<string>('');
+  const [securityToast, setSecurityToast] = useState<string | null>(null);
+
   // Submission protection guard
   const hasSubmittedRef = useRef<boolean>(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Trigger brief security warning toast
+  const triggerSecurityToast = useCallback((msg: string) => {
+    setSecurityToast(msg);
+    setTimeout(() => setSecurityToast(null), 3000);
+  }, []);
 
   // Initialize test data & restore target end timestamp
   useEffect(() => {
@@ -121,10 +134,26 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
     if (found) {
       setTest(found);
       const testQs = found.questions && found.questions.length > 0 ? found.questions : [];
-      setQuestions(testQs);
+      
+      // Store complete answer key in isolated ref (Zero-Trust Exam Security)
+      fullQuestionsRef.current = testQs;
 
-      if (testQs.length > 0) {
-        setVisited((prev) => ({ ...prev, [testQs[0].id]: true }));
+      // Mask answers and explanations from running client state so inspect element reveals nothing
+      const maskedQs: Question[] = testQs.map((q) => ({
+        ...q,
+        explanation: undefined,
+        options: q.options?.map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+          isCorrect: false, // Masked during active test
+          explanation: undefined,
+        })),
+      }));
+
+      setQuestions(maskedQs);
+
+      if (maskedQs.length > 0) {
+        setVisited((prev) => ({ ...prev, [maskedQs[0].id]: true }));
       }
 
       const storageKey = `prephub_exam_end_${testId}`;
@@ -201,6 +230,37 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [scorecard, answers]);
+
+  // Anti-Cheat: Tab-Switch & Window Minimization Proctor
+  useEffect(() => {
+    if (!isMounted || scorecard || hasSubmittedRef.current) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && !hasSubmittedRef.current && !scorecard) {
+        setTabSwitchCount((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            triggerSecurityToast('3 tab switches detected! Exam is being auto-submitted for review.');
+            handleAutoSubmitRef.current();
+          } else if (next === 2) {
+            setWarningMessage(
+              'Final Warning (2 of 3): Leaving the exam tab is strictly recorded. A 3rd tab switch will automatically submit your exam!'
+            );
+            setIsWarningModalOpen(true);
+          } else {
+            setWarningMessage(
+              'Integrity Warning (1 of 3): Tab switch detected. Please stay on this tab to ensure exam validity.'
+            );
+            setIsWarningModalOpen(true);
+          }
+          return next;
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isMounted, scorecard, triggerSecurityToast]);
 
   // Keep auto-submit ref updated with 1.5s countdown overlay
   const handleAutoSubmitRef = useRef<() => void>(() => {});
@@ -450,7 +510,9 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
     let skippedCount = 0;
     let subjectiveCount = 0;
 
-    questions.forEach((q, index) => {
+    const evalQuestions = fullQuestionsRef.current.length > 0 ? fullQuestionsRef.current : questions;
+
+    evalQuestions.forEach((q, index) => {
       const qMarks = q.marks || 4;
       const negMarks = q.negativeMarks || 0;
       totalPossibleMarks += qMarks;
@@ -1245,7 +1307,32 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
   const isCurrentMarked = Boolean(markedForReview[currentQ?.id]);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC] flex flex-col font-sans text-slate-900 selection:bg-[#E14D45]/15 selection:text-[#E14D45]">
+    <div
+      onContextMenu={(e) => {
+        if (!scorecard) {
+          e.preventDefault();
+          triggerSecurityToast('Right-click context menu is restricted during active examinations.');
+        }
+      }}
+      onCopy={(e) => {
+        if (!scorecard) {
+          e.preventDefault();
+          triggerSecurityToast('Copying exam questions is strictly prohibited.');
+        }
+      }}
+      onCut={(e) => {
+        if (!scorecard) e.preventDefault();
+      }}
+      className="min-h-screen bg-[#FBFBFC] flex flex-col font-sans text-slate-900 select-none selection:bg-[#E14D45]/15 selection:text-[#E14D45]"
+    >
+      {/* Security Toast Notification */}
+      {securityToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900/90 text-white text-xs font-semibold rounded-full shadow-lg border border-slate-700 backdrop-blur-md flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+          <span>{securityToast}</span>
+        </div>
+      )}
+
       {/* Top Examination Control Bar (Exit, Title, Centered Timer, Fullscreen, Status) */}
       <section className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
@@ -1981,6 +2068,42 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
               className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold tracking-tight shadow-xs transition-all cursor-pointer"
             >
               Leave Exam
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Anti-Cheat Proctor Integrity Warning Modal */}
+      <Modal
+        isOpen={isWarningModalOpen}
+        onClose={() => setIsWarningModalOpen(false)}
+        title="⚠️ Exam Proctor Security Notice"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-amber-900">Academic Integrity Alert</h4>
+              <p className="text-xs text-amber-800 leading-relaxed">{warningMessage}</p>
+            </div>
+          </div>
+
+          <div className="text-[11px] font-mono text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+            <div>
+              Recorded Incidents: <span className="font-bold text-rose-600">{tabSwitchCount} of 3</span>
+            </div>
+            <p className="text-slate-500 font-sans text-[11px]">
+              Switching tabs, minimizing the browser, or using external utilities is logged. A 3rd violation enforces instant auto-submission.
+            </p>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setIsWarningModalOpen(false)}
+              className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold tracking-tight transition-all cursor-pointer shadow-xs"
+            >
+              I Understand & Resume Exam
             </button>
           </div>
         </div>

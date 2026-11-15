@@ -19,6 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { authStore } from '@/lib/authStore';
+import { sanitizeInput, validatePasswordStrength, rateLimiter } from '@/lib/security/rateLimiter';
 import { UserRole } from '@/types';
 import { PrepHubLogo } from '@/components/brand/PrepHubLogo';
 
@@ -48,11 +49,11 @@ export const RegisterView: React.FC = () => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
+    const trimmedName = sanitizeInput(name);
+    const trimmedEmail = sanitizeInput(email).toLowerCase();
 
-    if (!trimmedName) {
-      setErrorMessage('Please enter your full name.');
+    if (!trimmedName || trimmedName.length < 2) {
+      setErrorMessage('Please enter your full name (at least 2 characters).');
       return;
     }
 
@@ -61,13 +62,20 @@ export const RegisterView: React.FC = () => {
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage('Password should be at least 8 characters.');
+    const passCheck = validatePasswordStrength(password);
+    if (!passCheck.isValid) {
+      setErrorMessage(passCheck.error || 'Password does not meet security requirements.');
       return;
     }
 
     if (role === 'teacher' && !facultyKey.trim()) {
       setErrorMessage('Faculty Authorization Key is required for educator accounts.');
+      return;
+    }
+
+    const lockout = rateLimiter.isLockedOut(trimmedEmail);
+    if (lockout.locked) {
+      setErrorMessage(`Too many registration attempts. Please wait ${lockout.remainingSeconds}s.`);
       return;
     }
 

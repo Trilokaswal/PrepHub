@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { authStore, DEMO_CREDENTIALS } from '@/lib/authStore';
+import { rateLimiter, sanitizeInput } from '@/lib/security/rateLimiter';
 import { UserRole, AuthUser } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { PrepHubLogo } from '@/components/brand/PrepHubLogo';
@@ -78,20 +79,33 @@ export const LoginView: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
-    setIsLoading(true);
 
+    const sanitizedEmail = sanitizeInput(email).toLowerCase();
+    const lockout = rateLimiter.isLockedOut(sanitizedEmail);
+    if (lockout.locked) {
+      setErrorMessage(`Too many failed attempts. Please wait ${lockout.remainingSeconds}s before trying again.`);
+      return;
+    }
+
+    setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     const result = authStore.isSupabaseActive()
-      ? await authStore.loginWithSupabase(email, password, role)
-      : authStore.login(email, password, role);
+      ? await authStore.loginWithSupabase(sanitizedEmail, password, role)
+      : authStore.login(sanitizedEmail, password, role);
 
     if (!result.success) {
-      setErrorMessage(result.error || 'Authentication failed. Please verify your email and password.');
+      const lockStatus = rateLimiter.recordFailedAttempt(sanitizedEmail);
+      if (lockStatus.locked) {
+        setErrorMessage(`Too many failed attempts. Login temporarily locked for ${lockStatus.remainingSeconds}s.`);
+      } else {
+        setErrorMessage(result.error || 'Authentication failed. Please verify your credentials.');
+      }
       setIsLoading(false);
       return;
     }
 
+    rateLimiter.resetAttempts(sanitizedEmail);
     setSuccessMessage(`Welcome back, ${result.user?.name}!`);
     setIsLoading(false);
 
