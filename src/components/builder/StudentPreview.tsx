@@ -19,6 +19,7 @@ import {
 import { Question, MockTest } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { MathText } from '@/components/ui/MathText';
 import { formatDateTime, formatCountdown } from '@/lib/formatters';
 
 interface StudentPreviewProps {
@@ -442,7 +443,11 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
 
               {/* Statement */}
               <div className="text-base text-slate-900 font-normal leading-relaxed whitespace-pre-line">
-                {activeQuestion.statement || <em className="text-slate-400">No question statement provided.</em>}
+                {activeQuestion.statement ? (
+                  <MathText text={activeQuestion.statement} />
+                ) : (
+                  <em className="text-slate-400">No question statement provided.</em>
+                )}
               </div>
 
               {/* Diagram / Image */}
@@ -502,7 +507,7 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
                             {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                           </div>
                           <span className="text-xs font-bold text-slate-500">{letter}.</span>
-                          <span className="text-sm flex-1">{opt.text}</span>
+                          <span className="text-sm flex-1"><MathText text={opt.text} /></span>
 
                           {canRevealAnswers && isCorrect && (
                             <span className="text-xs text-emerald-700 font-medium flex items-center gap-1">
@@ -560,7 +565,7 @@ export const StudentPreview: React.FC<StudentPreviewProps> = ({
                             {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
                           </div>
                           <span className="text-xs font-bold text-slate-500">{letter}.</span>
-                          <span className="text-sm flex-1">{opt.text}</span>
+                          <span className="text-sm flex-1"><MathText text={opt.text} /></span>
 
                           {canRevealAnswers && isCorrect && (
                             <span className="text-xs text-emerald-700 font-medium flex items-center gap-1">

@@ -19,6 +19,7 @@ import {
 import { Question, QuestionType, McqOption } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { MathText } from '@/components/ui/MathText';
 import { MathSymbolBar } from './MathSymbolBar';
 
 interface QuestionEditorProps {
@@ -408,7 +409,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           {statementPreview ? (
             <div className="min-h-[100px] p-3.5 bg-slate-50/70 border border-slate-200 rounded-lg text-sm text-slate-800 whitespace-pre-line leading-relaxed font-sans">
               {question.statement ? (
-                question.statement
+                <MathText text={question.statement} />
               ) : (
                 <em className="text-slate-400">Statement preview is empty. Switch to edit mode to type question text.</em>
               )}

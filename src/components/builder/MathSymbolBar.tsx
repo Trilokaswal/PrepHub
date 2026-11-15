@@ -24,14 +24,14 @@ const COMMON_SYMBOLS = [
   { label: '≥', val: '≥', title: 'Greater than or equal' },
   { label: 'x²', val: '²', title: 'Superscript 2' },
   { label: 'x³', val: '³', title: 'Superscript 3' },
-  { label: 'x₀', val: '₀', title: 'Subscript 0' },
-  { label: 'x₁', val: '₁', title: 'Subscript 1' },
-  { label: 'x₂', val: '₂', title: 'Subscript 2' },
   { label: '°', val: '°', title: 'Degree' },
   { label: '→', val: '→', title: 'Right arrow' },
-  { label: '⇌', val: '⇌', title: 'Equilibrium arrow' },
-  { label: 'Fraction', val: '\\frac{a}{b}', title: 'LaTeX Fraction template' },
-  { label: 'Subscript', val: '_{i}', title: 'LaTeX Subscript template' },
+  { label: 'Fraction', val: '$\\frac{a}{b}$', title: 'LaTeX Fraction $\\frac{a}{b}$' },
+  { label: 'Sqrt', val: '$\\sqrt{x}$', title: 'LaTeX Square Root $\\sqrt{x}$' },
+  { label: 'Integral', val: '$\\int_{0}^{\\infty} f(x) \\, dx$', title: 'LaTeX Definite Integral' },
+  { label: 'Sum', val: '$\\sum_{i=1}^{n} x_i$', title: 'LaTeX Summation' },
+  { label: 'Limit', val: '$\\lim_{x \\to 0} f(x)$', title: 'LaTeX Limit' },
+  { label: 'Matrix', val: '$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$', title: 'LaTeX Matrix' },
 ];
 
 export const MathSymbolBar: React.FC<MathSymbolBarProps> = ({

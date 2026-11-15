@@ -1,150 +1,194 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import katex from 'katex';
 
 interface MathTextProps {
-  text: string;
+  text?: string | null;
   className?: string;
+  block?: boolean;
+}
+
+interface Segment {
+  type: 'text' | 'inline-math' | 'block-math';
+  content: string;
 }
 
 /**
- * Parses simple LaTeX math fragments like:
- * - \sqrt{\frac{G\hbar}{c^3}}
- * - \frac{a}{b}
- * - G\hbar^2 c^3
- * - $G$, $\hbar$, $c$
- * and renders them in high-quality serif math typography with stacked fractions and radicals.
+ * Safely renders a LaTeX math snippet into HTML via KaTeX.
  */
-export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
-  if (!text) return null;
+function renderKatexHtml(latex: string, displayMode: boolean): string {
+  try {
+    return katex.renderToString(latex.trim(), {
+      displayMode,
+      throwOnError: false,
+      output: 'htmlAndMathml',
+      strict: false,
+      trust: false,
+    });
+  } catch (err) {
+    console.warn('KaTeX rendering error for expression:', latex, err);
+    return `<span class="katex-fallback font-mono text-sm text-slate-800">${escapeHtml(latex)}</span>`;
+  }
+}
 
-  // Render fraction
-  const renderFraction = (numerator: string, denominator: string, key: string | number) => (
-    <span key={key} className="inline-flex flex-col items-center align-middle mx-1 text-[0.9em] leading-none">
-      <span className="border-b border-slate-800 pb-0.5 px-1 font-serif italic text-center">
-        {renderMathInner(numerator)}
-      </span>
-      <span className="pt-0.5 px-1 font-serif italic text-center">
-        {renderMathInner(denominator)}
-      </span>
-    </span>
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Checks if a string without explicit $ delimiters is likely raw LaTeX.
+ * (e.g. "\frac{1}{2}", "\sqrt{x}", "\int_0^1", "\begin{pmatrix}...")
+ */
+function isRawLatex(str: string): boolean {
+  const trimmed = str.trim();
+  if (trimmed.startsWith('\\') && !trimmed.includes(' ')) return true;
+  return /\\(frac|sqrt|int|sum|prod|lim|infty|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|sigma|tau|phi|omega|partial|nabla|begin|end|times|approx|le|ge|ne|pm|cdot)\b/.test(
+    trimmed
   );
+}
 
-  // Render square root
-  const renderSqrt = (content: string, key: string | number) => (
-    <span key={key} className="inline-flex items-center align-middle mx-0.5">
-      <span className="text-xl leading-none font-serif select-none mr-[-1px] font-light">√</span>
-      <span className="border-t border-slate-800 pt-[1px] pl-0.5 pr-1 inline-flex items-center">
-        {renderMathInner(content)}
-      </span>
-    </span>
-  );
+/**
+ * Splits text into alternating plain text and math segments based on:
+ * - $$...$$ or \[...\] for display / block math
+ * - $...$ or \(...\) for inline math
+ */
+function parseSegments(raw: string): Segment[] {
+  const segments: Segment[] = [];
+  // Regex to match $$, \[, $, and \(
+  const regex = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\$([^\$\n]+?)\$|\\\(([\s\S]+?)\\\)/g;
 
-  // Parse inner math string (handling fractions, sqrts, powers, symbols)
-  const renderMathInner = (mathStr: string): React.ReactNode => {
-    // 1. Check for \sqrt{\frac{A}{B}}
-    const sqrtFracMatch = mathStr.match(/^\\sqrt\{\\frac\{([^}]+)\}\{([^}]+)\}\}$/);
-    if (sqrtFracMatch) {
-      return renderSqrt(
-        renderFraction(sqrtFracMatch[1], sqrtFracMatch[2], 'sqrt-frac') as unknown as string,
-        'sqrt-main'
-      );
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(raw)) !== null) {
+    // Leading plain text before the match
+    if (match.index > lastIndex) {
+      segments.push({
+        type: 'text',
+        content: raw.slice(lastIndex, match.index),
+      });
     }
 
-    // 2. Check for \sqrt{A}
-    const sqrtMatch = mathStr.match(/^\\sqrt\{([^}]+)\}$/);
-    if (sqrtMatch) {
-      return renderSqrt(sqrtMatch[1], 'sqrt-only');
+    if (match[1] !== undefined) {
+      // $$...$$
+      segments.push({ type: 'block-math', content: match[1] });
+    } else if (match[2] !== undefined) {
+      // \[...\]
+      segments.push({ type: 'block-math', content: match[2] });
+    } else if (match[3] !== undefined) {
+      // $...$
+      segments.push({ type: 'inline-math', content: match[3] });
+    } else if (match[4] !== undefined) {
+      // \(...\)
+      segments.push({ type: 'inline-math', content: match[4] });
     }
 
-    // 3. Check for \frac{A}{B}
-    const fracMatch = mathStr.match(/^\\frac\{([^}]+)\}\{([^}]+)\}$/);
-    if (fracMatch) {
-      return renderFraction(fracMatch[1], fracMatch[2], 'frac-only');
+    lastIndex = regex.lastIndex;
+  }
+
+  // Trailing plain text after the last match
+  if (lastIndex < raw.length) {
+    segments.push({
+      type: 'text',
+      content: raw.slice(lastIndex),
+    });
+  }
+
+  return segments;
+}
+
+/**
+ * Production-ready MathText component powered by KaTeX.
+ * Supports:
+ *  - Inline math: $E = mc^2$ or \(E = mc^2\)
+ *  - Block/Display math: $$\int_0^\infty e^{-x^2} dx$$ or \[\frac{-b \pm \sqrt{b^2-4ac}}{2a}\]
+ *  - Raw unquoted LaTeX formulas (e.g. \frac{a}{b})
+ *  - Responsive scroll wrappers for large matrices or expressions
+ */
+export const MathText: React.FC<MathTextProps> = ({
+  text,
+  className = '',
+  block = false,
+}) => {
+  const content = text || '';
+
+  const { isEntirelyRawMath, rawLatexHtml, segments } = useMemo(() => {
+    if (!content.trim()) {
+      return { isEntirelyRawMath: false, rawLatexHtml: '', segments: [] };
     }
 
-    // 4. Tokenize symbols, superscripts, variables
-    // Replace LaTeX tokens with characters
-    let processed = mathStr
-      .replace(/\\hbar/g, 'ℏ')
-      .replace(/\\cdot/g, '·')
-      .replace(/\\Delta/g, 'Δ')
-      .replace(/\\gamma/g, 'γ')
-      .replace(/\\theta/g, 'θ')
-      .replace(/\\pi/g, 'π')
-      .replace(/\\approx/g, '≈')
-      .replace(/\\le/g, '≤')
-      .replace(/\\ge/g, '≥')
-      .replace(/\\times/g, '×');
+    const trimmed = content.trim();
+    const isRaw =
+      !trimmed.includes('$') &&
+      !trimmed.includes('\\(') &&
+      !trimmed.includes('\\[') &&
+      isRawLatex(trimmed);
 
-    // Parse powers like x^2, c^3, \hbar^2
-    const parts: React.ReactNode[] = [];
-    const regex = /([A-Za-zℏγθπΔ])\^([0-9A-Za-z+\-]+)|([A-Za-zℏγθπΔ])_([0-9A-Za-z+\-]+)|([A-Za-zℏγθπΔ]+)|([^A-Za-zℏγθπΔ^_\s]+|\s+)/g;
-    let match;
-    let idx = 0;
-
-    while ((match = regex.exec(processed)) !== null) {
-      if (match[1] && match[2]) {
-        // Variable with power: e.g. G^2 or c^3
-        parts.push(
-          <span key={idx++} className="font-serif italic inline-flex items-baseline">
-            <span>{match[1]}</span>
-            <sup className="text-[0.7em] font-sans font-normal ml-[1px] not-italic">{match[2]}</sup>
-          </span>
-        );
-      } else if (match[3] && match[4]) {
-        // Variable with subscript: e.g. T_H
-        parts.push(
-          <span key={idx++} className="font-serif italic inline-flex items-baseline">
-            <span>{match[3]}</span>
-            <sub className="text-[0.7em] font-sans font-normal ml-[1px] not-italic">{match[4]}</sub>
-          </span>
-        );
-      } else if (match[5]) {
-        // Plain math variable
-        parts.push(
-          <span key={idx++} className="font-serif italic px-[1px]">
-            {match[5]}
-          </span>
-        );
-      } else if (match[6]) {
-        parts.push(<span key={idx++}>{match[6]}</span>);
-      }
+    if (block || isRaw) {
+      return {
+        isEntirelyRawMath: true,
+        rawLatexHtml: renderKatexHtml(trimmed, block || trimmed.includes('\\begin')),
+        segments: [],
+      };
     }
 
-    if (parts.length > 0) return parts;
-    return <span className="font-serif italic">{processed}</span>;
-  };
+    return {
+      isEntirelyRawMath: false,
+      rawLatexHtml: '',
+      segments: parseSegments(content),
+    };
+  }, [content, block]);
 
-  // If text contains $...$ inline math delimiters, split and render math segments
-  if (text.includes('$') || text.includes('\\sqrt') || text.includes('\\frac')) {
-    const segments = text.split(/(\$[^$]+\$|\\sqrt\{[^}]+\}|\\frac\{[^}]+\}\{[^}]+\})/g);
+  if (!content.trim()) return null;
 
+  if (isEntirelyRawMath) {
     return (
-      <span className={className}>
-        {segments.map((seg, i) => {
-          if (!seg) return null;
-          if (seg.startsWith('$') && seg.endsWith('$')) {
-            const mathContent = seg.slice(1, -1);
-            return (
-              <span key={i} className="inline-block mx-0.5">
-                {renderMathInner(mathContent)}
-              </span>
-            );
-          }
-          if (seg.startsWith('\\sqrt') || seg.startsWith('\\frac')) {
-            return (
-              <span key={i} className="inline-block mx-0.5">
-                {renderMathInner(seg)}
-              </span>
-            );
-          }
-          return <span key={i}>{seg}</span>;
-        })}
-      </span>
+      <div
+        className={`katex-block-wrapper my-2 overflow-x-auto overflow-y-hidden max-w-full text-center py-1 ${className}`}
+        dangerouslySetInnerHTML={{ __html: rawLatexHtml }}
+      />
     );
   }
 
-  // Plain text fallback
-  return <span className={className}>{text}</span>;
+  // If no math delimiters were detected at all, render simple text
+  if (segments.length === 1 && segments[0].type === 'text') {
+    return <span className={className}>{content}</span>;
+  }
+
+  return (
+    <span className={`katex-text-container ${className}`}>
+      {segments.map((seg, idx) => {
+        if (seg.type === 'text') {
+          return <span key={idx}>{seg.content}</span>;
+        }
+
+        if (seg.type === 'block-math') {
+          const html = renderKatexHtml(seg.content, true);
+          return (
+            <span
+              key={idx}
+              className="block my-2 overflow-x-auto overflow-y-hidden text-center py-1 select-text"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          );
+        }
+
+        // Inline math
+        const html = renderKatexHtml(seg.content, false);
+        return (
+          <span
+            key={idx}
+            className="inline-math-item inline-block align-baseline mx-0.5 select-text"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      })}
+    </span>
+  );
 };

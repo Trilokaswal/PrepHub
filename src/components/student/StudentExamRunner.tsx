@@ -198,7 +198,7 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
         clearInterval(timerIntervalRef.current);
       }
     };
-  }, [testId]);
+  }, [testId, router]);
 
   // Fullscreen change listener
   useEffect(() => {
