@@ -23,15 +23,13 @@ export const GlobalBackground: React.FC = () => {
     >
       {/* Base photographic layer: Beautiful Himalayan campus photograph */}
       <div
-        className="absolute inset-0 bg-cover bg-no-repeat bg-[center_top] transform-gpu will-change-transform"
+        className="absolute inset-0 bg-cover bg-no-repeat bg-[center_top] pointer-events-none"
         style={{
           backgroundImage: "url('/images/campus-bg.jpg')",
-          filter: 'brightness(1.01) contrast(1.02) saturate(1.02)',
+          filter: 'brightness(1.01) contrast(1.02) saturate(1.02) blur(0.5px)',
+          transform: 'translateZ(0)',
         }}
       />
-
-      {/* Optical atmospheric diffusion: Subtle blur to prevent fine architectural noise from conflicting with text */}
-      <div className="absolute inset-0 backdrop-blur-[1px] md:backdrop-blur-[1.5px]" />
 
       {/* Multi-stop daylight overlay: 
           - Generous transparency at the top preserving the natural beauty of the Himalayan mountains and architecture

@@ -5,25 +5,31 @@ import { updateSession } from '@/lib/supabase/middleware';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 0. Refresh Supabase session cookies if configured
-  const { supabaseResponse, user: supabaseUser } = await updateSession(request);
+  // 1. Fast redirect for legacy student login
+  if (pathname === '/student/login') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   const sessionToken = request.cookies.get('prephub_session_token')?.value;
   const userRole = request.cookies.get('prephub_role')?.value;
+  const hasLocalAuth = Boolean(sessionToken && userRole);
 
-  const isAuthenticated = Boolean((sessionToken && userRole) || supabaseUser);
+  // 2. Refresh Supabase session cookies if present
+  const { supabaseResponse, user: supabaseUser } = await updateSession(request);
+
+  const isAuthenticated = hasLocalAuth || Boolean(supabaseUser);
   const isTeacher =
     isAuthenticated &&
     (userRole === 'teacher' || (supabaseUser?.user_metadata?.role === 'teacher'));
 
-  // 1. Protect /teacher workspace so only authenticated teachers can enter
+  // 3. Protect /teacher workspace
   if (pathname.startsWith('/teacher') && !pathname.startsWith('/teacher/login')) {
     if (!isTeacher) {
       return NextResponse.redirect(new URL('/teacher/login', request.url));
     }
   }
 
-  // 2. Protect platform study, exam & profile routes: only users with an account can access
+  // 4. Protect platform study, exam & profile routes
   if (
     pathname.startsWith('/courses') ||
     pathname.startsWith('/test') ||
@@ -38,18 +44,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. Redirect legacy /student/login to /login
-  if (pathname === '/student/login') {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Note: Root '/' must ALWAYS render the new PrepHub landing page without redirecting
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    '/',
     '/teacher/:path*',
     '/student/:path*',
     '/courses',

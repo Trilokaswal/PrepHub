@@ -21,27 +21,52 @@ export async function updateSession(request: NextRequest) {
     return { supabaseResponse, user: null };
   }
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({
-          request,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
+  // Fast path 1: Skip external auth calls during Next.js link prefetching
+  const isPrefetch =
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-purpose') === 'prefetch' ||
+    request.headers.get('next-router-prefetch') !== null;
 
-  // Refresh auth token if expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (isPrefetch) {
+    return { supabaseResponse, user: null };
+  }
 
-  return { supabaseResponse, user };
+  // Fast path 2: Check if any Supabase session cookie is present
+  const allCookies = request.cookies.getAll();
+  const hasSupabaseCookie = allCookies.some(
+    (c) => c.name.startsWith('sb-') && c.name.includes('-auth-token')
+  );
+
+  if (!hasSupabaseCookie) {
+    // Zero network latency when no Supabase session cookie exists
+    return { supabaseResponse, user: null };
+  }
+
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
+    // Refresh auth token if expired
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    return { supabaseResponse, user };
+  } catch {
+    return { supabaseResponse, user: null };
+  }
 }

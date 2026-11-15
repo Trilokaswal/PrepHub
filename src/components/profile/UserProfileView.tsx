@@ -39,7 +39,6 @@ import {
 import { authStore, DEMO_CREDENTIALS } from '@/lib/authStore';
 import { getStoredAttempts, subscribeToAttempts } from '@/lib/attemptsStore';
 import { savedQuestionsStore, SavedQuestionItem } from '@/lib/savedQuestionsStore';
-import { COURSES_DATA, CourseInfo } from '@/data/coursesData';
 import { AuthUser, StudentAttempt, UserRole } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
