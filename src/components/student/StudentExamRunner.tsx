@@ -976,7 +976,7 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 font-mono">
-              {scorecard.testTitle} &bull; {scorecard.subject} &bull; B.Tech Semester 1
+              {scorecard.testTitle} &bull; {scorecard.subject} {scorecard.targetYear ? `&bull; ${scorecard.targetYear}` : ''}
             </p>
           </div>
 

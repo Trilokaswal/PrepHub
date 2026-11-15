@@ -39,6 +39,11 @@ import {
 import { authStore, DEMO_CREDENTIALS } from '@/lib/authStore';
 import { getStoredAttempts, subscribeToAttempts, syncAttemptsFromSupabase } from '@/lib/attemptsStore';
 import { savedQuestionsStore, SavedQuestionItem } from '@/lib/savedQuestionsStore';
+import {
+  COURSE_OPTIONS,
+  normalizeCourseName,
+  getCurriculumSubjects,
+} from '@/lib/courseCatalog';
 import { AuthUser, StudentAttempt, UserRole } from '@/types';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -72,10 +77,10 @@ export const UserProfileView: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editRoll, setEditRoll] = useState('');
-  const [editCourse, setEditCourse] = useState('B.Tech');
-  const [editBranch, setEditBranch] = useState('Computer Science & Engineering');
-  const [editSemester, setEditSemester] = useState<string | number>(1);
-  const [editSection, setEditSection] = useState('A');
+  const [editCourse, setEditCourse] = useState('');
+  const [editBranch, setEditBranch] = useState('');
+  const [editSemester, setEditSemester] = useState<number>(1);
+  const [editSection, setEditSection] = useState('');
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   // Preference Toggles State
@@ -101,9 +106,9 @@ export const UserProfileView: React.FC = () => {
     setEditName(currentUser.name || '');
     setEditPhone(currentUser.phone || '');
     setEditRoll(currentUser.universityRoll || '');
-    setEditCourse(currentUser.course || 'B.Tech');
-    setEditBranch(currentUser.branch || 'Computer Science & Engineering');
-    setEditSemester(currentUser.semester || 1);
+    setEditCourse(currentUser.course || '');
+    setEditBranch(currentUser.branch || '');
+    setEditSemester(currentUser.semester ? Number(currentUser.semester) : 1);
     setEditSection(currentUser.section || '');
 
     setAttempts(getStoredAttempts());
@@ -191,23 +196,56 @@ export const UserProfileView: React.FC = () => {
     };
   }, [userAttempts, savedQuestions]);
 
-  // Real Curriculum Progress Calculated Per Subject
-  const curriculumProgress = useMemo(() => {
-    const subjects = [
-      { name: 'Engineering Mathematics I', code: 'MATH-101', keywords: ['math', 'calculus', 'algebra'] },
-      { name: 'Programming in C', code: 'CS-101', keywords: ['c', 'programming', 'code', 'data structure'] },
-      { name: 'Engineering Physics', code: 'PHY-101', keywords: ['physics', 'mechanic', 'thermodynamic'] },
-      { name: 'Basic Electrical & Electronics', code: 'EE-101', keywords: ['electrical', 'electronic', 'circuit'] },
-      { name: 'Environmental Science & Ethics', code: 'ENV-101', keywords: ['environment', 'ecology', 'ethics'] },
-    ];
+  // Derived enrolled academic details
+  const enrolledCourse = user?.course || editCourse || '';
+  const enrolledBranch = user?.branch || editBranch || '';
+  const enrolledSemester = user?.semester ? Number(user.semester) : (editSemester ? Number(editSemester) : 1);
+  const userHasAcademicSetup = Boolean(enrolledCourse && enrolledBranch);
 
-    return subjects.map((subj) => {
+  // Available branches dynamically scoped to currently chosen course
+  const selectedCourseConfig = useMemo(() => {
+    if (!editCourse) return null;
+    const norm = normalizeCourseName(editCourse).toLowerCase();
+    return COURSE_OPTIONS.find((c) => c.name.toLowerCase() === norm || c.id === norm) || null;
+  }, [editCourse]);
+
+  const availableBranches = useMemo(() => {
+    return selectedCourseConfig?.branches || [];
+  }, [selectedCourseConfig]);
+
+  const maxSemesters = selectedCourseConfig?.totalSemesters || 8;
+
+  const handleCourseChange = (newCourse: string) => {
+    setEditCourse(newCourse);
+    const config = COURSE_OPTIONS.find(
+      (c) => c.name.toLowerCase() === newCourse.toLowerCase() || c.id === newCourse.toLowerCase()
+    );
+    if (config && config.branches.length > 0) {
+      setEditBranch(config.branches[0].name);
+    } else {
+      setEditBranch('');
+    }
+  };
+
+  // Real Curriculum Progress Calculated Per Subject according to user's chosen course & branch
+  const curriculumProgress = useMemo(() => {
+    if (!userHasAcademicSetup) return [];
+
+    const rawSubjects = getCurriculumSubjects(enrolledCourse, enrolledBranch, enrolledSemester);
+
+    return rawSubjects.map((subj) => {
+      const subjLower = subj.name.toLowerCase();
+      const codeLower = subj.code.toLowerCase();
+      const keywords = subjLower.split(/[\s,&-]+/).filter((w) => w.length > 2);
+
       const matchingAttempts = userAttempts.filter((a) => {
         const subName = (a.subject || '').toLowerCase();
         const testTitle = (a.testTitle || '').toLowerCase();
         return (
-          subName.includes(subj.name.toLowerCase()) ||
-          subj.keywords.some((k) => subName.includes(k) || testTitle.includes(k))
+          subName.includes(subjLower) ||
+          testTitle.includes(subjLower) ||
+          testTitle.includes(codeLower) ||
+          keywords.some((k) => subName.includes(k) || testTitle.includes(k))
         );
       });
 
@@ -228,7 +266,7 @@ export const UserProfileView: React.FC = () => {
         progress,
       };
     });
-  }, [userAttempts]);
+  }, [userHasAcademicSetup, enrolledCourse, enrolledBranch, enrolledSemester, userAttempts]);
 
   // Real Exam Readiness Score & Forecast Infographic
   const readinessMetrics = useMemo(() => {
@@ -255,9 +293,9 @@ export const UserProfileView: React.FC = () => {
     else if (calculatedScore >= 65) grade = 'B+ (Good)';
     else if (calculatedScore >= 50) grade = 'B (Average)';
 
-    let summary = `Solid progress across ${distinctSubjects} subject(s). Keep practicing to reach top-tier marks in Semester ${editSemester || 1}.`;
+    let summary = `Solid progress across ${distinctSubjects} subject(s). Keep practicing to reach top-tier marks in Semester ${enrolledSemester || 1}.`;
     if (calculatedScore >= 80) {
-      summary = `High retention rate! You are on track for top-tier marks in Semester ${editSemester || 1} examinations.`;
+      summary = `High retention rate! You are on track for top-tier marks in Semester ${enrolledSemester || 1} examinations.`;
     } else if (calculatedScore < 50) {
       summary = `Early stage. Review weaker concepts and attempt more mock tests to boost your predicted score.`;
     }
@@ -269,7 +307,7 @@ export const UserProfileView: React.FC = () => {
       syllabusCovered: `${syllabusPercent}% complete`,
       predictedGrade: grade,
     };
-  }, [userAttempts, editSemester]);
+  }, [userAttempts, enrolledSemester]);
 
   // Filtered History
   const filteredAttempts = useMemo(() => {
@@ -351,9 +389,6 @@ export const UserProfileView: React.FC = () => {
   }
 
   const isTeacher = user.role === 'teacher';
-  const enrolledCourse = editCourse || 'B.Tech';
-  const enrolledBranch = editBranch || 'Computer Science & Engineering';
-  const enrolledSemester = editSemester || 1;
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col font-sans text-slate-900 selection:bg-[#E14D45]/15 selection:text-[#E14D45]">
@@ -420,12 +455,23 @@ export const UserProfileView: React.FC = () => {
 
                 {/* Academic Chips */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60 flex items-center gap-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-[#E14D45]" />
-                    <span>
-                      {enrolledCourse} &bull; {enrolledBranch.split(' ')[0]} (Sem {enrolledSemester})
+                  {userHasAcademicSetup ? (
+                    <span className="font-semibold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60 flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-[#E14D45]" />
+                      <span>
+                        {enrolledCourse} &bull; {enrolledBranch} (Sem {enrolledSemester})
+                      </span>
                     </span>
-                  </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('settings')}
+                      className="font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100/80 px-2.5 py-1 rounded-md border border-amber-200/80 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Select Course &amp; Branch in Settings &rarr;</span>
+                    </button>
+                  )}
 
                   <span className="font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60">
                     Roll: <strong className="text-slate-800">{user.universityRoll || editRoll || 'Not Assigned'}</strong>
@@ -605,45 +651,67 @@ export const UserProfileView: React.FC = () => {
                       Curriculum Progress &bull; Semester {enrolledSemester}
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Standard syllabus subjects for {enrolledCourse} ({enrolledBranch.split(' ')[0]}).
+                      {userHasAcademicSetup
+                        ? `Standard syllabus subjects for ${enrolledCourse} (${enrolledBranch}).`
+                        : 'Personalized syllabus subjects will appear once your course and branch are selected.'}
                     </p>
                   </div>
-                  <Link
-                    href={`/courses/${enrolledCourse.toLowerCase().replace(/[^a-z0-9]/g, '')}/cse/semester-${enrolledSemester}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E14D45] hover:text-[#CC3F37] transition-colors"
-                  >
-                    <span>Open Semester Curriculum</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  {userHasAcademicSetup && (
+                    <Link
+                      href={`/courses/${enrolledCourse.toLowerCase().replace(/[^a-z0-9]/g, '') || 'btech'}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E14D45] hover:text-[#CC3F37] transition-colors"
+                    >
+                      <span>Open Curriculum</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
                 </div>
 
                 {/* Subject Progress Bars */}
-                <div className="space-y-5">
-                  {curriculumProgress.map((subj) => (
-                    <div key={subj.code} className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                            {subj.code}
-                          </span>
-                          <span className="font-bold text-slate-900">{subj.name}</span>
+                {!userHasAcademicSetup ? (
+                  <div className="p-8 sm:p-10 rounded-2xl bg-slate-50/80 border border-dashed border-slate-300 text-center space-y-3.5">
+                    <BookOpen className="w-8 h-8 text-slate-400 mx-auto" />
+                    <h4 className="text-sm font-bold text-slate-800">Academic Curriculum Not Selected</h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                      Select your enrolled Degree Course and Branch in Account Settings to load your personalized semester syllabus and track your real-time subject progress.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('settings')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>Configure Course &amp; Branch</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {curriculumProgress.map((subj) => (
+                      <div key={subj.code} className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                              {subj.code}
+                            </span>
+                            <span className="font-bold text-slate-900">{subj.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold font-mono text-slate-800">{subj.progress}%</span>
+                            <span className="text-slate-400 ml-1">
+                              ({subj.testsDone}/{subj.totalTests} tests)
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold font-mono text-slate-800">{subj.progress}%</span>
-                          <span className="text-slate-400 ml-1">
-                            ({subj.testsDone}/{subj.totalTests} tests)
-                          </span>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#15233E] to-[#E14D45] rounded-full transition-all duration-500"
+                            style={{ width: `${subj.progress}%` }}
+                          />
                         </div>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#15233E] to-[#E14D45] rounded-full transition-all duration-500"
-                          style={{ width: `${subj.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Recent Activity Timeline */}
@@ -1009,11 +1077,30 @@ export const UserProfileView: React.FC = () => {
             <div className="space-y-4">
               {filteredSavedQuestions.length === 0 ? (
                 <div className="bg-white/95 rounded-3xl p-12 text-center border border-slate-200/80 space-y-4">
-                  <Bookmark className="w-10 h-10 text-slate-300 mx-auto" />
-                  <h3 className="text-base font-bold text-slate-800">No flagged questions in this subject</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    During examination sessions, click the bookmark/flag button on difficult questions to store them in your permanent revision vault.
-                  </p>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/70 text-amber-600 flex items-center justify-center mx-auto shadow-2xs">
+                    <Bookmark className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-800">
+                      {savedQuestions.length === 0
+                        ? 'No Flagged Questions in Vault'
+                        : 'No flagged questions matching this filter'}
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                      {savedQuestions.length === 0
+                        ? 'You have not flagged any questions for revision yet. During mock tests or scorecard reviews, click the bookmark/flag icon on challenging questions to store them here for targeted review.'
+                        : 'Try switching the subject filter to view questions saved from other examination papers.'}
+                    </p>
+                  </div>
+                  {savedQuestions.length === 0 && (
+                    <Link
+                      href="/courses"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>Browse Mock Tests</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
                 </div>
               ) : (
                 filteredSavedQuestions.map((q, idx) => {
@@ -1199,32 +1286,42 @@ export const UserProfileView: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-700">Enrolled Course / Degree</label>
                       <select
                         value={editCourse}
-                        onChange={(e) => setEditCourse(e.target.value)}
+                        onChange={(e) => handleCourseChange(e.target.value)}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#E14D45]/30 focus:border-[#E14D45] bg-white cursor-pointer"
                       >
-                        <option value="B.Tech">B.Tech (Bachelor of Technology)</option>
-                        <option value="BCA">BCA (Bachelor of Computer Applications)</option>
-                        <option value="BBA">BBA (Bachelor of Business Admin)</option>
-                        <option value="BA">BA (Bachelor of Arts)</option>
-                        <option value="BSc">BSc (Bachelor of Science)</option>
+                        <option value="">-- Select Enrolled Course / Degree --</option>
+                        {COURSE_OPTIONS.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.fullName}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
-                    {/* Branch */}
+                    {/* Branch / Specialization (Dynamically mapped to the selected course) */}
                     <div className="space-y-1">
                       <label className="block text-xs font-bold text-slate-700">Branch / Specialization</label>
                       <select
                         value={editBranch}
                         onChange={(e) => setEditBranch(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#E14D45]/30 focus:border-[#E14D45] bg-white cursor-pointer"
+                        disabled={!editCourse}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#E14D45]/30 focus:border-[#E14D45] bg-white cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
                       >
-                        <option value="Computer Science & Engineering">Computer Science &amp; Engineering (CSE)</option>
-                        <option value="Electronics & Communication">Electronics &amp; Communication (ECE)</option>
-                        <option value="Mechanical Engineering">Mechanical Engineering (ME)</option>
-                        <option value="Electrical Engineering">Electrical Engineering (EE)</option>
-                        <option value="Civil Engineering">Civil Engineering (CE)</option>
-                        <option value="Information Technology">Information Technology (IT)</option>
+                        {!editCourse ? (
+                          <option value="">-- Please select a Course first --</option>
+                        ) : (
+                          availableBranches.map((b) => (
+                            <option key={b.name} value={b.name}>
+                              {b.label}
+                            </option>
+                          ))
+                        )}
                       </select>
+                      {editCourse && (
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Showing verified academic specializations for {editCourse}.
+                        </p>
+                      )}
                     </div>
 
                     {/* Semester Number */}
@@ -1235,7 +1332,7 @@ export const UserProfileView: React.FC = () => {
                         onChange={(e) => setEditSemester(Number(e.target.value))}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#E14D45]/30 focus:border-[#E14D45] bg-white cursor-pointer"
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                        {Array.from({ length: maxSemesters }, (_, i) => i + 1).map((s) => (
                           <option key={s} value={s}>
                             Semester {s}
                           </option>

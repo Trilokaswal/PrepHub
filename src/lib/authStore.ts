@@ -552,13 +552,13 @@ export const authStore = {
       name: studentName,
       email: isEmail ? normalizedId : `${trimmedId.toLowerCase().replace(/[^a-z0-9]/g, '') || 'candidate'}@prephub.edu`,
       phone: digitsOnly.length >= 10 ? digitsOnly : undefined,
-      universityRoll: !isEmail ? trimmedId.toUpperCase() : `2026-CS-${Math.floor(100 + Math.random() * 900)}`,
+      universityRoll: !isEmail ? trimmedId.toUpperCase() : undefined,
       classRoll: !isEmail && /^\d+$/.test(trimmedId) ? trimmedId : undefined,
       role: 'student',
-      branch: 'Computer Science & Engineering',
-      course: 'B.Tech',
-      department: 'Computer Science',
-      gradeOrTarget: 'B.Tech CS • Student Mock Tests',
+      branch: undefined,
+      course: undefined,
+      department: undefined,
+      gradeOrTarget: undefined,
       avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       createdAt: new Date().toISOString(),
       passwordHash: trimmedPassword || 'password123',
@@ -662,12 +662,9 @@ export const authStore = {
 
     const gradeTargetDisplay =
       data.gradeOrTarget?.trim() ||
-      (data.course && data.branch ? `${data.course.trim()} • ${data.branch.trim()}` : undefined) ||
-      (data.role === 'student' ? 'General Curriculum' : undefined);
+      (data.course && data.branch ? `${data.course.trim()} • ${data.branch.trim()}` : undefined);
 
-    const generatedRoll =
-      data.universityRoll?.trim() ||
-      `2026-${(data.branch || 'CS').substring(0, 2).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    const userRoll = data.universityRoll?.trim() || undefined;
 
     const newUser: StoredRegisteredUser = {
       id: newId,
@@ -677,7 +674,7 @@ export const authStore = {
       role: data.role,
       department: departmentDisplay,
       gradeOrTarget: gradeTargetDisplay,
-      universityRoll: generatedRoll,
+      universityRoll: userRoll,
       classRoll: data.classRoll?.trim(),
       section: data.section?.trim(),
       branch: data.branch?.trim(),
@@ -869,11 +866,11 @@ export const authStore = {
         name: studentName,
         email: trimmedEmail,
         role: 'student',
-        branch: 'Computer Science & Engineering',
-        course: 'B.Tech',
-        department: 'Computer Science',
-        gradeOrTarget: 'B.Tech • Computer Science',
-        universityRoll: `2026-CS-${Math.floor(100 + Math.random() * 900)}`,
+        branch: undefined,
+        course: undefined,
+        department: undefined,
+        gradeOrTarget: undefined,
+        universityRoll: undefined,
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         passwordHash: trimmedPass,
