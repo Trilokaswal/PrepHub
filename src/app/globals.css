@@ -50,6 +50,16 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #94A3B8;
   }
+
+  /* Shimmer indeterminate progress animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
 }
 
 /* Reduced-motion accessibility standard */

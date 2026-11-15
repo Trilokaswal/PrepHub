@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import React, { Suspense } from 'react';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import 'katex/dist/katex.min.css';
 import { GlobalBackground } from '@/components/layout/GlobalBackground';
+import { PageTransitionLoader } from '@/components/layout/PageTransitionLoader';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -57,6 +59,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <GlobalBackground />
+        <Suspense fallback={null}>
+          <PageTransitionLoader />
+        </Suspense>
         <div className="relative z-10 min-h-screen flex flex-col">{children}</div>
       </body>
     </html>
