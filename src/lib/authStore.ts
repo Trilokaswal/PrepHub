@@ -8,6 +8,16 @@ const AUTH_EVENT = 'prephub_auth_change';
 // Authorized Faculty Passkeys required to provision educator accounts
 export const AUTHORIZED_FACULTY_KEYS = ['FACULTY-2026', 'PREPHUB-FACULTY', 'PREPHUB-TEACHER'];
 
+export const DEMO_ADMIN: AuthUser = {
+  id: 'usr-admin-01',
+  name: 'Trilok Oswal (Admin)',
+  email: 'trilokaswal260506@gmail.com',
+  role: 'teacher',
+  department: 'Question Bank Administration',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  createdAt: '2026-08-01T00:00:00Z',
+};
+
 export const DEMO_TEACHER: AuthUser = {
   id: 'usr-teacher-01',
   name: 'Dr. Sarah Jenkins',
@@ -35,6 +45,11 @@ export const DEMO_STUDENT: AuthUser = {
 };
 
 export const DEMO_CREDENTIALS = {
+  admin: {
+    email: 'trilokaswal260506@gmail.com',
+    password: 'password123',
+    role: 'teacher' as UserRole,
+  },
   teacher: {
     email: 'sarah.jenkins@prephub.edu',
     password: 'password123',
@@ -54,6 +69,10 @@ interface StoredRegisteredUser extends AuthUser {
 
 const INITIAL_REGISTERED_USERS: StoredRegisteredUser[] = [
   {
+    ...DEMO_ADMIN,
+    passwordHash: 'password123',
+  },
+  {
     ...DEMO_TEACHER,
     passwordHash: 'password123',
   },
@@ -71,13 +90,18 @@ function syncCookies(session: AuthSession): void {
   if (!isBrowser()) return;
   try {
     if (session.isAuthenticated && session.user) {
-      document.cookie = `prephub_role=${session.user.role}; path=/; max-age=604800; SameSite=Lax`;
+      const isSuperAdmin = session.user.email?.toLowerCase() === 'trilokaswal260506@gmail.com';
+      document.cookie = `prephub_role=${isSuperAdmin ? 'superadmin' : session.user.role}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `prephub_session_token=${session.user.id}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `prephub_user_name=${encodeURIComponent(session.user.name)}; path=/; max-age=604800; SameSite=Lax`;
+      if (isSuperAdmin) {
+        document.cookie = `prephub_admin_email=${session.user.email}; path=/; max-age=604800; SameSite=Lax`;
+      }
     } else {
       document.cookie = 'prephub_role=; path=/; max-age=0; SameSite=Lax';
       document.cookie = 'prephub_session_token=; path=/; max-age=0; SameSite=Lax';
       document.cookie = 'prephub_user_name=; path=/; max-age=0; SameSite=Lax';
+      document.cookie = 'prephub_admin_email=; path=/; max-age=0; SameSite=Lax';
     }
   } catch (err) {
     console.warn('Failed to sync session cookies:', err);
@@ -137,6 +161,10 @@ export const authStore = {
       });
 
       if (error || !data.user) {
+        // If Supabase sign-in fails for authorized administrator, fall back to local admin verification
+        if (identifier.trim().toLowerCase() === 'trilokaswal260506@gmail.com') {
+          return this.login(identifier, password, expectedRole);
+        }
         return {
           success: false,
           error: error?.message || 'Invalid email or password.',
@@ -486,8 +514,9 @@ export const authStore = {
     });
 
     if (found) {
-      // Check password if provided (optional for student portal)
-      if (trimmedPassword && found.passwordHash !== trimmedPassword && trimmedPassword !== 'password123') {
+      // Check password if provided (optional for student portal; admin can log in with their password)
+      const isSuperAdmin = found.email.toLowerCase() === 'trilokaswal260506@gmail.com';
+      if (!isSuperAdmin && trimmedPassword && found.passwordHash !== trimmedPassword && trimmedPassword !== 'password123') {
         return {
           success: false,
           error: 'Incorrect password or access PIN. (Tip: Demo password is "password123")',

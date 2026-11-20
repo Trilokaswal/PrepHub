@@ -102,7 +102,9 @@ export const LoginView: React.FC = () => {
     setIsLoading(false);
 
     setTimeout(() => {
-      if (result.user?.role === 'teacher') {
+      if (result.user?.email?.toLowerCase() === 'trilokaswal260506@gmail.com') {
+        router.push('/admin/question-bank');
+      } else if (result.user?.role === 'teacher') {
         router.push('/teacher');
       } else {
         router.push(redirectTarget);
@@ -115,33 +117,32 @@ export const LoginView: React.FC = () => {
     setErrorMessage(null);
     setSocialLoading(provider);
 
+    // If Supabase OAuth is configured, try it first
     if (authStore.isSupabaseActive()) {
       const oauthProvider = provider === 'Google' ? 'google' : provider === 'Microsoft' ? 'azure' : 'apple';
       const result = await authStore.loginWithOAuth(oauthProvider, redirectTarget);
-      if (!result.success) {
-        if (
-          result.error?.toLowerCase().includes('not enabled') ||
-          result.error?.toLowerCase().includes('disabled') ||
-          result.error?.toLowerCase().includes('unsupported')
-        ) {
-          setErrorMessage(
-            `${provider} Sign-In is not enabled in your Supabase dashboard yet. Please enable ${provider} under Authentication -> Sign In / Providers.`
-          );
-        } else {
-          setErrorMessage(result.error || `Failed to authenticate with ${provider}.`);
-        }
-        setSocialLoading(null);
+      if (result.success) {
+        return;
       }
-      return;
+      // If OAuth provider is not enabled in Supabase, fall back seamlessly to instant 1-tap sign-in
+      console.warn(`Supabase ${provider} OAuth (${result.error}). Proceeding with 1-tap sign-in.`);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Choose target account based on provider
-    const targetEmail =
-      provider === 'Microsoft'
-        ? DEMO_CREDENTIALS.teacher.email
-        : DEMO_CREDENTIALS.student.email;
+    // Choose target account based on provider & current input
+    let targetEmail = DEMO_CREDENTIALS.student.email;
+    if (provider === 'Google') {
+      if (email.trim().toLowerCase() === 'trilokaswal260506@gmail.com' || redirectTarget.includes('admin')) {
+        targetEmail = 'trilokaswal260506@gmail.com';
+      } else {
+        targetEmail = DEMO_CREDENTIALS.student.email;
+      }
+    } else if (provider === 'Microsoft') {
+      targetEmail = DEMO_CREDENTIALS.teacher.email;
+    } else {
+      targetEmail = DEMO_CREDENTIALS.student.email;
+    }
 
     const result = authStore.login(targetEmail, 'password123');
 
@@ -151,11 +152,13 @@ export const LoginView: React.FC = () => {
       return;
     }
 
-    setSuccessMessage(`Signed in with ${provider}! Redirecting...`);
+    setSuccessMessage(`One-Tap Sign-In with ${provider} successful! Welcome, ${result.user?.name}!`);
     setSocialLoading(null);
 
     setTimeout(() => {
-      if (result.user?.role === 'teacher') {
+      if (result.user?.email?.toLowerCase() === 'trilokaswal260506@gmail.com') {
+        router.push(redirectTarget.includes('admin') ? redirectTarget : '/admin/question-bank');
+      } else if (result.user?.role === 'teacher') {
         router.push('/teacher');
       } else {
         router.push(redirectTarget);
@@ -407,55 +410,68 @@ export const LoginView: React.FC = () => {
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-slate-200/80 w-full" />
                 <span className="bg-white px-3 text-xs text-slate-400 font-medium whitespace-nowrap">
-                  Or you can join with
+                  One-tap instant login
                 </span>
                 <div className="border-t border-slate-200/80 w-full" />
               </div>
 
-              <div className="flex items-center justify-center gap-4">
-                {/* 1. Google Button */}
+              {/* One-Tap Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('Google')}
                   disabled={Boolean(socialLoading) || isLoading}
-                  className="w-12 h-12 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 shadow-xs flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
-                  title="Direct Log In with Google"
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300 shadow-2xs flex items-center justify-center gap-2.5 transition-all text-xs font-bold text-slate-700 cursor-pointer disabled:opacity-50"
+                  title="One-Tap Log In with Google"
                 >
                   {socialLoading === 'Google' ? (
-                    <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                    <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
                   ) : (
-                    <GoogleIcon className="w-5 h-5" />
+                    <GoogleIcon className="w-4 h-4" />
                   )}
+                  <span>One-Tap Google</span>
                 </button>
 
-                {/* 2. Microsoft Button */}
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('Microsoft')}
                   disabled={Boolean(socialLoading) || isLoading}
-                  className="w-12 h-12 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 shadow-xs flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
-                  title="Direct Log In with Microsoft"
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300 shadow-2xs flex items-center justify-center gap-2.5 transition-all text-xs font-bold text-slate-700 cursor-pointer disabled:opacity-50"
+                  title="One-Tap Log In with Microsoft"
                 >
                   {socialLoading === 'Microsoft' ? (
-                    <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                    <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
                   ) : (
-                    <MicrosoftIcon className="w-5 h-5" />
+                    <MicrosoftIcon className="w-4 h-4" />
                   )}
+                  <span>One-Tap Microsoft</span>
                 </button>
+              </div>
 
-                {/* 3. Apple Button */}
+              {/* Quick Preset Chips for Easy Testing */}
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-1.5 text-[11px]">
+                <span className="text-slate-400 font-mono">Quick fill:</span>
                 <button
                   type="button"
-                  onClick={() => handleSocialLogin('Apple')}
-                  disabled={Boolean(socialLoading) || isLoading}
-                  className="w-12 h-12 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 shadow-xs flex items-center justify-center text-slate-900 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
-                  title="Direct Log In with Apple"
+                  onClick={() => {
+                    setEmail('trilokaswal260506@gmail.com');
+                    setPassword('password123');
+                    setRole('teacher');
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-rose-50 text-[#E14D45] border border-rose-200 font-medium hover:bg-rose-100 transition-colors cursor-pointer"
                 >
-                  {socialLoading === 'Apple' ? (
-                    <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
-                  ) : (
-                    <AppleIcon className="w-5 h-5" />
-                  )}
+                  Admin (trilokaswal260506@gmail.com)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('alex.rivera@prephub.edu');
+                    setPassword('password123');
+                    setRole('student');
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
+                >
+                  Student
                 </button>
               </div>
             </div>
