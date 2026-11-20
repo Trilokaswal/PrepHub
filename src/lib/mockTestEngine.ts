@@ -35,6 +35,44 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
+ * Flexible subject matcher that links curriculum subjects with question bank categories
+ */
+export function matchSubject(qSubject: string, targetSubject: string): boolean {
+  if (!targetSubject || targetSubject === 'All') return true;
+  const q = qSubject.trim().toLowerCase();
+  const t = targetSubject.trim().toLowerCase();
+  if (q === t) return true;
+  if (t.includes(q) || q.includes(t)) return true;
+
+  // Key subject mapping:
+  const mathTerms = ['math', 'calculus', 'algebra', 'discrete'];
+  if (mathTerms.some((m) => t.includes(m)) && mathTerms.some((m) => q.includes(m))) return true;
+
+  const physicsTerms = ['physic', 'mechanic', 'optics', 'electromagnetism'];
+  if (physicsTerms.some((p) => t.includes(p)) && physicsTerms.some((p) => q.includes(p))) return true;
+
+  const chemTerms = ['chemist', 'reaction', 'organic', 'inorganic'];
+  if (chemTerms.some((c) => t.includes(c)) && chemTerms.some((c) => q.includes(c))) return true;
+
+  const csTerms = ['data structure', 'algorithm', 'operating system', 'network', 'dbms', 'database', 'c++', 'programming', 'c '];
+  if (csTerms.some((c) => t.includes(c)) && csTerms.some((c) => q.includes(c))) return true;
+
+  return false;
+}
+
+/**
+ * Flexible topic matcher
+ */
+export function matchTopic(qTopic: string, targetTopic?: string): boolean {
+  if (!targetTopic || targetTopic === 'All' || targetTopic.trim() === '') return true;
+  const qt = qTopic.trim().toLowerCase();
+  const tt = targetTopic.trim().toLowerCase();
+  if (qt === tt) return true;
+  if (qt.includes(tt) || tt.includes(qt)) return true;
+  return false;
+}
+
+/**
  * Checks available question pool for a given configuration
  */
 export function getEligibleQuestionPool(config: {
@@ -43,18 +81,15 @@ export function getEligibleQuestionPool(config: {
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed';
 }): BankQuestion[] {
   const all = questionBankStore.getQuestions();
-  return all.filter((q) => {
-    // Subject filter
-    if (config.subject && config.subject !== 'All' && q.subject.toLowerCase() !== config.subject.toLowerCase()) {
+
+  // Tier 1: exact/fuzzy subject + topic + difficulty match
+  let pool = all.filter((q) => {
+    if (!matchSubject(q.subject, config.subject)) {
       return false;
     }
-    // Topic filter
-    if (config.topic && config.topic !== 'All' && config.topic.trim() !== '') {
-      if (q.topic.toLowerCase() !== config.topic.toLowerCase()) {
-        return false;
-      }
+    if (!matchTopic(q.topic, config.topic)) {
+      return false;
     }
-    // Difficulty filter
     if (config.difficulty && config.difficulty !== 'Mixed') {
       if (q.difficulty.toLowerCase() !== config.difficulty.toLowerCase()) {
         return false;
@@ -62,6 +97,32 @@ export function getEligibleQuestionPool(config: {
     }
     return true;
   });
+
+  // Tier 2: if topic was specific and returned too few questions, broaden to full subject
+  if (pool.length < 5 && config.topic && config.topic !== 'All') {
+    const subjectPool = all.filter((q) => {
+      if (!matchSubject(q.subject, config.subject)) return false;
+      if (config.difficulty && config.difficulty !== 'Mixed') {
+        if (q.difficulty.toLowerCase() !== config.difficulty.toLowerCase()) return false;
+      }
+      return true;
+    });
+    if (subjectPool.length > pool.length) {
+      pool = subjectPool;
+    }
+  }
+
+  // Tier 3: if still empty, draw from full bank matching difficulty so student can always take a test
+  if (pool.length === 0) {
+    pool = all.filter((q) => {
+      if (config.difficulty && config.difficulty !== 'Mixed') {
+        return q.difficulty.toLowerCase() === config.difficulty.toLowerCase();
+      }
+      return true;
+    });
+  }
+
+  return pool;
 }
 
 /**

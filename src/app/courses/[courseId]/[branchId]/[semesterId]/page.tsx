@@ -3,18 +3,16 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   ArrowRight,
-  Clock,
   BookOpen,
-  Layers,
-  CheckCircle2,
   Sparkles,
-  HelpCircle,
-  Award,
+  CheckCircle2,
+  Shuffle,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { RedUnderline } from '@/components/brand/RedUnderline';
 import { getCourseById, getBranchById, getSemesterById } from '@/data/coursesData';
-import { CourseIcon, SubjectIcon } from '@/components/courses/CourseIcon';
+import { CourseIcon } from '@/components/courses/CourseIcon';
+import { SubjectListWithTestGenerator } from '@/components/student/SubjectListWithTestGenerator';
 
 interface SemesterSubjectsPageProps {
   params: Promise<{
@@ -42,8 +40,12 @@ export default async function SemesterSubjectsPage({ params }: SemesterSubjectsP
     notFound();
   }
 
-  const subjects = semester.subjects || [];
-  const totalMockTests = subjects.reduce((sum, s) => sum + (s.tests?.length || 0), 0);
+  const subjects = (semester.subjects || []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    code: s.code,
+    description: s.description,
+  }));
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col font-sans text-slate-900 selection:bg-[#E14D45]/15 selection:text-[#E14D45]">
@@ -89,8 +91,8 @@ export default async function SemesterSubjectsPage({ params }: SemesterSubjectsP
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-2xl">
-                All subjects taught in {semester.title} of {branch.name}. Each subject contains official
-                timed mock tests with 10 questions each, designed to test fundamental understanding and exam readiness.
+                All subjects taught in {semester.title} of {branch.name}. Select any subject to launch a custom
+                mock examination generated from the Question Bank with topic filters, countdown timer, and instant scoring.
               </p>
 
               {/* Highlights pills */}
@@ -100,12 +102,12 @@ export default async function SemesterSubjectsPage({ params }: SemesterSubjectsP
                   {subjects.length} Subjects
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E14D45]/10 text-[#E14D45] text-xs font-semibold font-mono">
-                  <Sparkles className="w-3.5 h-3.5 text-[#E14D45]" />
-                  {totalMockTests} Mock Tests Available
+                  <Shuffle className="w-3.5 h-3.5 text-[#E14D45]" />
+                  Dynamic Question Bank Engine
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  10 Questions Each &bull; Instant Scoring
+                  Randomized Questions &bull; Instant Scoring
                 </span>
               </div>
             </div>
@@ -114,7 +116,7 @@ export default async function SemesterSubjectsPage({ params }: SemesterSubjectsP
 
         {/* Section 04 / SUBJECTS & MOCK TESTS */}
         <section className="py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
             {/* Sub-header */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
               <div className="lg:col-span-7 space-y-2">
@@ -132,107 +134,19 @@ export default async function SemesterSubjectsPage({ params }: SemesterSubjectsP
 
               <div className="lg:col-span-5 lg:pl-6">
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Select any mock test below to launch the examination runner with a live countdown timer,
-                  question navigator, and immediate performance review.
+                  Click Attempt Test on any subject to configure chapters, difficulty, and question count.
+                  Questions are randomly sampled on demand from the Question Bank.
                 </p>
               </div>
             </div>
 
-            {/* Subjects List */}
-            <div className="space-y-8">
-              {subjects.map((subject, sIdx) => (
-                <div
-                  key={subject.id}
-                  className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6"
-                >
-                  {/* Subject Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                    <div className="flex items-start sm:items-center gap-4">
-                      {/* Subject Icon in square shape with non-sharp corners */}
-                      <div className="w-14 h-14 rounded-xl bg-[#15233E] text-white flex items-center justify-center shadow-xs shrink-0">
-                        <SubjectIcon subjectName={subject.name} className="w-7 h-7 stroke-[1.8]" />
-                      </div>
-
-                      <div className="space-y-1 max-w-2xl">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                            {subject.code || `SUBJ-${sIdx + 1}`}
-                          </span>
-                          <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                            {subject.name}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          {subject.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex items-center gap-2 text-xs font-mono font-bold text-[#E14D45] bg-[#E14D45]/10 px-3 py-1.5 rounded-xl self-start sm:self-auto">
-                      <span>{subject.tests.length} Practice Tests</span>
-                    </div>
-                  </div>
-
-                  {/* Mock Tests Cards for this Subject */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {subject.tests.map((test, tIdx) => (
-                      <div
-                        key={test.id}
-                        className="rounded-2xl p-5 border border-slate-200 bg-[#FAFAFA]/70 hover:bg-white hover:border-slate-300 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between space-y-4 group"
-                      >
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                test.level === 'Beginner'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : test.level === 'Advanced'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {test.level}
-                            </span>
-
-                            <span className="text-xs font-mono font-bold text-slate-500 flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              {test.durationMinutes} mins
-                            </span>
-                          </div>
-
-                          <h4 className="text-base font-bold text-slate-900 tracking-tight group-hover:text-[#E14D45] transition-colors leading-snug">
-                            {test.title}
-                          </h4>
-
-                          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
-                            {test.description}
-                          </p>
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-200/70 flex items-center justify-between">
-                          <span className="text-xs font-mono font-medium text-slate-600 flex items-center gap-1.5">
-                            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{test.questionCount} Questions</span>
-                          </span>
-
-                          <Link
-                            href={`/test/${test.id}`}
-                            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold tracking-tight shadow-xs transition-all active:scale-[0.98] ${
-                              tIdx === 0
-                                ? 'bg-[#E14D45] hover:bg-[#CC3F37] text-white'
-                                : 'bg-[#15233E] hover:bg-[#1E2F52] text-white'
-                            }`}
-                          >
-                            <span>Attempt Test</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* Subjects List with Integrated Test Generator */}
+            <SubjectListWithTestGenerator
+              subjects={subjects}
+              courseName={course.name}
+              branchName={branch.name}
+              semesterTitle={semester.title}
+            />
           </div>
         </section>
 
