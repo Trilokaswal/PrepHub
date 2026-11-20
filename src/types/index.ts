@@ -223,3 +223,31 @@ export interface AuthSession {
   isAuthenticated: boolean;
 }
 
+export interface BankQuestion {
+  id: string;
+  statement: string;
+  subject: string;
+  topic: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  type: QuestionType;
+  options?: McqOption[];
+  correctAnswer?: string;
+  explanation?: string;
+  marks: number;
+  negativeMarks: number;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MockTestGenerationConfig {
+  subject: string;
+  topic?: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed';
+  questionCount: number;
+  durationMinutes: number;
+  marksPerQuestion: number;
+  negativeMarks: number;
+}
+
+

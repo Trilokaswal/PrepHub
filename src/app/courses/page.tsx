@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChevronRight, Layers, BookOpen } from 'lucide-react';
+import { ArrowRight, ChevronRight, Layers, BookOpen, Shuffle } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { RedUnderline } from '@/components/brand/RedUnderline';
 import { COURSES_DATA } from '@/data/coursesData';
@@ -102,6 +102,37 @@ export default function CoursesPage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Dynamic Mock Test Generator Banner */}
+        <section className="py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-gradient-to-r from-slate-900 via-[#15233E] to-slate-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-slate-800">
+              <div className="space-y-2 max-w-xl">
+                <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-widest text-[#E14D45] uppercase">
+                  <Shuffle className="w-3.5 h-3.5 text-[#E14D45]" />
+                  <span>PREPHUB RANDOM TEST ENGINE</span>
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                  Need a custom challenge? Generate a random test.
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Choose your subject, difficulty, and question count. Our server samples from the question bank with non-repeating sequences every attempt.
+                </p>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-3">
+                <Link
+                  href="/tests/generator"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#E14D45] hover:bg-[#CC3F37] text-white text-xs font-bold tracking-tight shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <Shuffle className="w-4 h-4" />
+                  <span>Launch Test Generator</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

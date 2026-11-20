@@ -61,6 +61,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab }) => {
             )}
           </Link>
 
+          {/* Question Bank Link: accessible from navbar with Admin indicator */}
+          <Link
+            href="/admin/question-bank"
+            className={`relative py-5 text-xs font-semibold tracking-tight transition-colors flex items-center gap-1.5 ${
+              pathname.startsWith('/admin/question-bank') ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <span>Question Bank</span>
+            <span className="text-[9px] font-mono font-bold bg-[#E14D45]/10 text-[#E14D45] px-1.5 py-0.5 rounded-sm uppercase">
+              Admin
+            </span>
+            {pathname.startsWith('/admin/question-bank') && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E14D45] rounded-full" />
+            )}
+          </Link>
+
           {/* Mock tests link: ONLY visible to authenticated users on platform pages (never on Home or About) */}
           {currentUser && !isHome && !isAbout && (
             <Link

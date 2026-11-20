@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { getStoredTests, getStoredTestById } from '@/lib/testStore';
 import { addStudentAttempt } from '@/lib/attemptsStore';
+import { evaluateRandomMockTest } from '@/lib/mockTestEngine';
 import { authStore, DEMO_STUDENT } from '@/lib/authStore';
 import { MockTest, Question, SubjectiveAnswerSubmission, TestCategory, EngineeringYear } from '@/types';
 import { Modal } from '@/components/ui/Modal';
@@ -501,6 +502,23 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
     }
 
     const currentUser = authStore.getCurrentUser() || DEMO_STUDENT;
+    const studentRollDisplay = currentUser.universityRoll || currentUser.classRoll || 'NA';
+
+    // Zero-Trust Evaluation for Dynamic Question Bank Mock Tests
+    if (testId.startsWith('mock-random-')) {
+      const serverScorecard = evaluateRandomMockTest(testId, answers, {
+        name: currentUser.name,
+        roll: studentRollDisplay,
+        email: currentUser.email,
+      });
+      if (serverScorecard) {
+        setScorecard({ ...serverScorecard, autoSubmitted });
+        setIsTimeUpOverlay(false);
+        setIsSubmitModalOpen(false);
+        setIsSubmitting(false);
+        return;
+      }
+    }
     let attainedMarks = 0;
     let totalPossibleMarks = 0;
     const subjectiveSubmissions: SubjectiveAnswerSubmission[] = [];
@@ -738,7 +756,6 @@ export const StudentExamRunner: React.FC<StudentExamRunnerProps> = ({ testId }) 
 
     const newAttemptId = `attempt_${Date.now()}`;
     const submittedTime = new Date().toISOString();
-    const studentRollDisplay = currentUser.universityRoll || currentUser.classRoll || 'NA';
     const studentEmailDisplay = currentUser.email || 'student@prephub.in';
 
     const attemptRecord = {

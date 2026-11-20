@@ -10,6 +10,7 @@ export interface ModalProps {
   description?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,6 +20,7 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   maxWidth = 'md',
+  size,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -94,11 +96,13 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  const maxWidthStyles = {
+  const chosenWidth = size || maxWidth;
+  const maxWidthStyles: Record<string, string> = {
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-3xl',
   };
 
   return (
@@ -114,7 +118,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className={`w-full ${maxWidthStyles[maxWidth]} bg-white rounded-xl shadow-modal border border-slate-200/90 overflow-hidden transform transition-all motion-reduce:transform-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none`}
+        className={`w-full ${maxWidthStyles[chosenWidth] || 'max-w-md'} bg-white rounded-xl shadow-modal border border-slate-200/90 overflow-hidden transform transition-all motion-reduce:transform-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div>

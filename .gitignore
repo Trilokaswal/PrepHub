@@ -32,6 +32,7 @@ yarn-error.log*
 # temporary reports & status exports
 *.pdf
 teacher_dashboard_status.html
+PrepHub_Project_Architecture_and_Capabilities.html
 
 # typescript
 *.tsbuildinfo
