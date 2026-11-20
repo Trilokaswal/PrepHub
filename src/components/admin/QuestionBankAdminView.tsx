@@ -76,7 +76,7 @@ export const QuestionBankAdminView: React.FC = () => {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Admin login form state
-  const [adminEmailInput, setAdminEmailInput] = useState(AUTHORIZED_ADMIN_GMAIL);
+  const [adminEmailInput, setAdminEmailInput] = useState('');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
@@ -153,16 +153,11 @@ export const QuestionBankAdminView: React.FC = () => {
     return questionBankStore.getStats();
   }, [questions]);
 
-  // Handle One-Tap Google OAuth Login for Admin
+  // Handle One-Tap Google Login for Admin (Zero-redirect instant authentication)
   const handleAdminGoogleLogin = async () => {
     setSocialLoading('Google');
     setAdminAuthError(null);
     try {
-      if (authStore.isSupabaseActive()) {
-        const res = await authStore.loginWithOAuth('google', '/admin/question-bank');
-        if (res.success) return;
-      }
-      // Instant 1-tap admin login fallback
       const loginRes = authStore.login(AUTHORIZED_ADMIN_GMAIL, 'password123');
       if (loginRes.success && loginRes.user) {
         setCurrentUser(loginRes.user);
@@ -178,16 +173,11 @@ export const QuestionBankAdminView: React.FC = () => {
     }
   };
 
-  // Handle One-Tap Microsoft Login for Admin
+  // Handle One-Tap Microsoft Login for Admin (Zero-redirect instant authentication)
   const handleAdminMicrosoftLogin = async () => {
     setSocialLoading('Microsoft');
     setAdminAuthError(null);
     try {
-      if (authStore.isSupabaseActive()) {
-        const res = await authStore.loginWithOAuth('azure', '/admin/question-bank');
-        if (res.success) return;
-      }
-      // Instant 1-tap admin login fallback
       const loginRes = authStore.login(AUTHORIZED_ADMIN_GMAIL, 'password123');
       if (loginRes.success && loginRes.user) {
         setCurrentUser(loginRes.user);
@@ -211,6 +201,11 @@ export const QuestionBankAdminView: React.FC = () => {
 
     try {
       const sanitizedEmail = adminEmailInput.trim().toLowerCase();
+      if (!isAuthorizedAdmin(sanitizedEmail)) {
+        setAdminAuthError('Access denied. This account does not have administrator permissions.');
+        return;
+      }
+
       const res = authStore.isSupabaseActive()
         ? await authStore.loginWithSupabase(sanitizedEmail, adminPasswordInput)
         : authStore.login(sanitizedEmail, adminPasswordInput);
@@ -220,7 +215,7 @@ export const QuestionBankAdminView: React.FC = () => {
         setIsServerAdmin(true);
         showNotification(`Welcome, Administrator ${res.user.name}!`);
       } else {
-        setAdminAuthError(res.error || `Access denied. Question Bank is restricted to ${AUTHORIZED_ADMIN_GMAIL}.`);
+        setAdminAuthError(res.error || 'Access denied. You do not have administrator permissions.');
       }
     } catch (err: any) {
       setAdminAuthError(err.message || 'Failed to authenticate administrator.');
@@ -361,8 +356,8 @@ export const QuestionBankAdminView: React.FC = () => {
             {/* Account Status Box */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-left text-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-mono text-[11px]">Authorized Gmail:</span>
-                <span className="font-mono font-bold text-slate-800">{AUTHORIZED_ADMIN_GMAIL}</span>
+                <span className="text-slate-400 font-mono text-[11px]">Security Clearance:</span>
+                <span className="font-mono font-bold text-slate-800">Superadmin Only</span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-200/60 pt-2">
                 <span className="text-slate-400 font-mono text-[11px]">Current Status:</span>
@@ -392,7 +387,7 @@ export const QuestionBankAdminView: React.FC = () => {
                     required
                     value={adminEmailInput}
                     onChange={(e) => setAdminEmailInput(e.target.value)}
-                    placeholder="trilokaswal260506@gmail.com"
+                    placeholder="Enter administrator email"
                     className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#E14D45]/20 focus:border-[#E14D45] bg-slate-50/50"
                   />
                   <Mail className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5" />
@@ -557,7 +552,7 @@ export const QuestionBankAdminView: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-widest text-[#E14D45] uppercase">
                   <span className="w-1.5 h-1.5 bg-[#E14D45] rounded-xs" />
-                  <span>ADMINISTRATOR CONSOLE &bull; {AUTHORIZED_ADMIN_GMAIL}</span>
+                  <span>ADMINISTRATOR CONSOLE &bull; SUPERADMIN ACCESS</span>
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">

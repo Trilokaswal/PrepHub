@@ -117,29 +117,16 @@ export const LoginView: React.FC = () => {
     setErrorMessage(null);
     setSocialLoading(provider);
 
-    // If Supabase OAuth is configured, try it first
-    if (authStore.isSupabaseActive()) {
-      const oauthProvider = provider === 'Google' ? 'google' : provider === 'Microsoft' ? 'azure' : 'apple';
-      const result = await authStore.loginWithOAuth(oauthProvider, redirectTarget);
-      if (result.success) {
-        return;
-      }
-      // If OAuth provider is not enabled in Supabase, fall back seamlessly to instant 1-tap sign-in
-      console.warn(`Supabase ${provider} OAuth (${result.error}). Proceeding with 1-tap sign-in.`);
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 250));
 
     // Choose target account based on provider & current input
     let targetEmail = DEMO_CREDENTIALS.student.email;
-    if (provider === 'Google') {
-      if (email.trim().toLowerCase() === 'trilokaswal260506@gmail.com' || redirectTarget.includes('admin')) {
-        targetEmail = 'trilokaswal260506@gmail.com';
-      } else {
-        targetEmail = DEMO_CREDENTIALS.student.email;
-      }
+    const inputEmail = email.trim().toLowerCase();
+
+    if (inputEmail === 'trilokaswal260506@gmail.com' || redirectTarget.includes('admin')) {
+      targetEmail = 'trilokaswal260506@gmail.com';
     } else if (provider === 'Microsoft') {
-      targetEmail = DEMO_CREDENTIALS.teacher.email;
+      targetEmail = DEMO_CREDENTIALS.student.email;
     } else {
       targetEmail = DEMO_CREDENTIALS.student.email;
     }
@@ -450,18 +437,7 @@ export const LoginView: React.FC = () => {
 
               {/* Quick Preset Chips for Easy Testing */}
               <div className="pt-2 flex flex-wrap items-center justify-center gap-1.5 text-[11px]">
-                <span className="text-slate-400 font-mono">Quick fill:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('trilokaswal260506@gmail.com');
-                    setPassword('password123');
-                    setRole('teacher');
-                  }}
-                  className="px-2 py-0.5 rounded-md bg-rose-50 text-[#E14D45] border border-rose-200 font-medium hover:bg-rose-100 transition-colors cursor-pointer"
-                >
-                  Admin (trilokaswal260506@gmail.com)
-                </button>
+                <span className="text-slate-400 font-mono">Demo:</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -469,9 +445,9 @@ export const LoginView: React.FC = () => {
                     setPassword('password123');
                     setRole('student');
                   }}
-                  className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
+                  className="px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
                 >
-                  Student
+                  Student Demo
                 </button>
               </div>
             </div>

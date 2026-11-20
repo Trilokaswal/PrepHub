@@ -516,10 +516,10 @@ export const authStore = {
     if (found) {
       // Check password if provided (optional for student portal; admin can log in with their password)
       const isSuperAdmin = found.email.toLowerCase() === 'trilokaswal260506@gmail.com';
-      if (!isSuperAdmin && trimmedPassword && found.passwordHash !== trimmedPassword && trimmedPassword !== 'password123') {
+      if (trimmedPassword && found.passwordHash !== trimmedPassword && trimmedPassword !== 'password123') {
         return {
           success: false,
-          error: 'Incorrect password or access PIN. (Tip: Demo password is "password123")',
+          error: isSuperAdmin ? 'Incorrect administrator password.' : 'Incorrect password or access PIN. (Tip: Demo password is "password123")',
         };
       }
 

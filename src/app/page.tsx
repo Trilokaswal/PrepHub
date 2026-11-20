@@ -303,7 +303,7 @@ export default function HomePage() {
 
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
                   <Lock className="w-3 h-3 text-[#E14D45]" />
-                  <span>Restricted to trilokaswal260506@gmail.com</span>
+                  <span>Restricted to Authorized University Administrator</span>
                 </div>
               </div>
             </div>
