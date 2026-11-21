@@ -66,6 +66,8 @@ export const QuestionBankAdminView: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   // Modals state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -134,11 +136,19 @@ export const QuestionBankAdminView: React.FC = () => {
         search: searchQuery,
       })
     );
+    setCurrentPage(1);
   }, [selectedSubject, selectedTopic, selectedDifficulty, selectedType, searchQuery]);
 
   useEffect(() => {
     refreshQuestions();
   }, [refreshQuestions]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(questions.length / pageSize) || 1;
+  const paginatedQuestions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return questions.slice(start, start + pageSize);
+  }, [questions, currentPage, pageSize]);
 
   // Derived subjects and topics
   const availableSubjects = useMemo(() => {
@@ -823,9 +833,10 @@ export const QuestionBankAdminView: React.FC = () => {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {questions.map((q, qIndex) => {
+                  {paginatedQuestions.map((q, qIndex) => {
                     const isSelected = selectedIds.includes(q.id);
                     const isExpanded = expandedId === q.id;
+                    const questionNumber = (currentPage - 1) * pageSize + qIndex + 1;
 
                     return (
                       <div
@@ -848,7 +859,7 @@ export const QuestionBankAdminView: React.FC = () => {
                             {/* Badges row */}
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-mono text-xs font-bold text-slate-400">
-                                #{qIndex + 1}
+                                #{questionNumber}
                               </span>
 
                               <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-md">
@@ -974,6 +985,39 @@ export const QuestionBankAdminView: React.FC = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Pagination controls */}
+              {questions.length > pageSize && (
+                <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, questions.length)} of {questions.length} questions
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors"
+                    >
+                      Previous
+                    </button>
+
+                    <span className="text-xs font-mono font-bold px-2 py-1 bg-slate-100 text-slate-700 rounded-md">
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

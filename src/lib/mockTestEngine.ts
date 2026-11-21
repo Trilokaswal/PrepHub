@@ -80,7 +80,8 @@ export function getEligibleQuestionPool(config: {
   topic?: string;
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed';
 }): BankQuestion[] {
-  const all = questionBankStore.getQuestions();
+  // Load questions specifically for the target subject
+  const all = questionBankStore.getQuestions({ subject: config.subject });
 
   // Tier 1: exact/fuzzy subject + topic + difficulty match
   let pool = all.filter((q) => {

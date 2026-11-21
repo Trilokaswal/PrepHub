@@ -1,5 +1,6 @@
 import { BankQuestion, QuestionType, MockTest, Question, McqOption, MockTestGenerationConfig } from '@/types';
 import { createClient as createBrowserSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getSubjectQuestions, getAllSubjectNames, getSubjectBankStats } from './subjectQuestionBank';
 
 export const AUTHORIZED_ADMIN_GMAIL = 'trilokaswal260506@gmail.com';
 
@@ -468,8 +469,27 @@ export const questionBankStore = {
     type?: string;
     search?: string;
   }): BankQuestion[] {
-    const all = getStoredBankQuestions();
-    return all.filter((q) => {
+    let source: BankQuestion[] = [];
+    const custom = getStoredBankQuestions();
+
+    if (filters?.subject && filters.subject !== 'All') {
+      // 1. Specific subject requested: load 70 mixed questions for this subject!
+      const catalogQs = getSubjectQuestions(filters.subject);
+      const customForSubj = custom.filter(
+        (q) => q.subject.toLowerCase() === filters.subject!.toLowerCase()
+      );
+      source = [...customForSubj, ...catalogQs];
+    } else {
+      // 2. 'All' subjects: load custom questions + a representative cross-subject sample
+      const catalogSample: BankQuestion[] = [];
+      const allNames = getAllSubjectNames();
+      for (let i = 0; i < Math.min(allNames.length, 20); i++) {
+        catalogSample.push(...getSubjectQuestions(allNames[i]));
+      }
+      source = [...custom, ...catalogSample];
+    }
+
+    return source.filter((q) => {
       if (filters?.subject && filters.subject !== 'All' && q.subject.toLowerCase() !== filters.subject.toLowerCase()) {
         return false;
       }
@@ -497,21 +517,35 @@ export const questionBankStore = {
   },
 
   getQuestionById(id: string): BankQuestion | undefined {
-    const all = getStoredBankQuestions();
-    return all.find((q) => q.id === id);
+    const custom = getStoredBankQuestions();
+    const found = custom.find((q) => q.id === id);
+    if (found) return found;
+
+    // Check catalog cache or load subject questions
+    const allNames = getAllSubjectNames();
+    for (const name of allNames) {
+      const qs = getSubjectQuestions(name);
+      const match = qs.find((q) => q.id === id);
+      if (match) return match;
+    }
+    return undefined;
   },
 
   getAvailableSubjects(): string[] {
-    const all = getStoredBankQuestions();
-    const set = new Set<string>();
-    all.forEach((q) => set.add(q.subject));
+    const custom = getStoredBankQuestions();
+    const set = new Set<string>(getAllSubjectNames());
+    custom.forEach((q) => set.add(q.subject));
     return Array.from(set).sort();
   },
 
   getAvailableTopics(subject?: string): string[] {
-    const all = getStoredBankQuestions();
     const set = new Set<string>();
-    all.forEach((q) => {
+    if (subject && subject !== 'All') {
+      const subjectQs = getSubjectQuestions(subject);
+      subjectQs.forEach((q) => set.add(q.topic));
+    }
+    const custom = getStoredBankQuestions();
+    custom.forEach((q) => {
       if (!subject || subject === 'All' || q.subject.toLowerCase() === subject.toLowerCase()) {
         set.add(q.topic);
       }
@@ -524,19 +558,24 @@ export const questionBankStore = {
     subjectCounts: { [subject: string]: number };
     difficultyCounts: { Easy: number; Medium: number; Hard: number };
   } {
-    const all = getStoredBankQuestions();
-    const subjectCounts: { [subject: string]: number } = {};
-    const difficultyCounts = { Easy: 0, Medium: 0, Hard: 0 };
+    const baseStats = getSubjectBankStats();
+    const custom = getStoredBankQuestions();
+    const subjectCounts: { [subject: string]: number } = { ...baseStats.subjectCounts };
+    const difficultyCounts = { ...baseStats.difficultyCounts };
+    let totalCount = baseStats.totalCount;
 
-    all.forEach((q) => {
-      subjectCounts[q.subject] = (subjectCounts[q.subject] || 0) + 1;
-      if (q.difficulty in difficultyCounts) {
-        difficultyCounts[q.difficulty]++;
+    custom.forEach((q) => {
+      if (!subjectCounts[q.subject]) {
+        subjectCounts[q.subject] = 1;
+        totalCount += 1;
+        if (q.difficulty in difficultyCounts) {
+          difficultyCounts[q.difficulty]++;
+        }
       }
     });
 
     return {
-      totalCount: all.length,
+      totalCount,
       subjectCounts,
       difficultyCounts,
     };
